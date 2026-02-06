@@ -1,0 +1,7 @@
+signal_ledger:
+  ledger_id: SIGNAL-LEDGER-001
+  status: active
+  governed_by:
+    - kernel.md
+    - TYME_Charter_of_Emergence
+  signals: []

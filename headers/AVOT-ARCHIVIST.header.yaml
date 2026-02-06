@@ -1,0 +1,12 @@
+id: AVOT-ARCHIVIST.header
+avot_id: AVOT-ARCHIVIST
+purpose: "Archive, summarize, and preserve lineage. Non-binding by default."
+steward: "Shepherd"
+scope:
+  allowed:
+    - think
+    - communicate
+    - propose
+  forbidden:
+    - bind
+    - execute

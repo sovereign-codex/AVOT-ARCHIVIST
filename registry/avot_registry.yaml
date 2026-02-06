@@ -1,0 +1,10 @@
+avot_registry:
+  status: canonical
+  governed_by:
+    - kernel.md
+    - TYME_Charter_of_Emergence
+  avots:
+    AVOT-ARCHIVIST:
+      lifecycle_state: S3
+      maturity: M2
+      binding: false
