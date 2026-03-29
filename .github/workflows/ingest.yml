@@ -6,6 +6,9 @@ on:
       - "incoming/**"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   ingest:
     runs-on: ubuntu-latest
@@ -16,18 +19,28 @@ jobs:
 
       - name: Log incoming files
         run: |
-          echo "Incoming files:"
-          ls -R incoming || echo "No incoming files"
+          echo "==== Incoming Files ===="
+          ls -R incoming || echo "No incoming files found"
 
       - name: Copy files to processed
         run: |
+          echo "==== Copying Files ===="
           mkdir -p processed
           cp -r incoming/* processed/ 2>/dev/null || echo "Nothing to copy"
 
+      - name: Show processed files
+        run: |
+          echo "==== Processed Files ===="
+          ls -R processed || echo "No processed files"
+
       - name: Commit processed files
         run: |
+          echo "==== Committing Changes ===="
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
+
           git add .
-          git commit -m "Processed incoming files" || echo "No changes"
+
+          git commit -m "Processed incoming files" || echo "No changes to commit"
+
           git push
