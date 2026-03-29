@@ -1,5 +1,8 @@
 name: AVOT Engine Runner
 
+permissions:
+  contents: write
+
 on:
   workflow_run:
     workflows: ["Archivist Ingest"]
@@ -8,18 +11,17 @@ on:
 
 jobs:
   run-engine:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Ensure output directory exists
-        run: mkdir -p outputs/signals
+      - run: mkdir -p outputs/signals
 
-      - name: Process signals
-        run: |
+      - run: |
           echo "=== ENGINE START ==="
 
           for file in processed/signals/*.json; do
@@ -34,8 +36,6 @@ jobs:
               PRIORITY=$(jq -r '.priority' "$file")
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-              echo "Writing output for $filename"
-
               echo "# AVOT Execution Output" > "$output"
               echo "" >> "$output"
               echo "**File:** $filename" >> "$output"
@@ -48,12 +48,7 @@ jobs:
               echo "- Priority: $PRIORITY" >> "$output"
               echo "" >> "$output"
               echo "## Engine Response" >> "$output"
-              echo "This signal has been received and interpreted by the AVOT Engine." >> "$output"
-              echo "" >> "$output"
-              echo "Next stage:" >> "$output"
-              echo "- Route to appropriate AVOT" >> "$output"
-              echo "- Execute domain-specific logic" >> "$output"
-              echo "- Produce actionable artifact" >> "$output"
+              echo "Signal interpreted successfully." >> "$output"
               echo "---" >> "$output"
 
             fi
@@ -61,11 +56,9 @@ jobs:
 
           echo "=== ENGINE END ==="
 
-      - name: Commit outputs
-        run: |
+      - run: |
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
-
           git add outputs/
           git commit -m "Engine processed signals into outputs" || echo "No changes"
           git push
