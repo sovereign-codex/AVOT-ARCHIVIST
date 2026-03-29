@@ -15,12 +15,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Ensure outputs directory exists
+      - name: Ensure output directory exists
         run: mkdir -p outputs/signals
 
-      - name: Process signals and generate outputs
+      - name: Process signals
         run: |
-          echo "=== ENGINE EXECUTION START ==="
+          echo "=== ENGINE START ==="
 
           for file in processed/signals/*.json; do
             if [ -f "$file" ]; then
@@ -28,50 +28,38 @@ jobs:
               filename=$(basename "$file" .json)
               output="outputs/signals/$filename.md"
 
-              echo "Processing: $file"
-
               TYPE=$(jq -r '.type' "$file")
               TITLE=$(jq -r '.title' "$file")
               SUMMARY=$(jq -r '.summary' "$file")
               PRIORITY=$(jq -r '.priority' "$file")
-
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-              cat <<'EOF' > "$output"
-# AVOT Execution Output
+              echo "Writing output for $filename"
 
-**File:** FILENAME  
-**Timestamp:** TIMESTAMP  
-
-## Parsed Signal
-- Type: TYPE
-- Title: TITLE
-- Summary: SUMMARY
-- Priority: PRIORITY
-
-## Engine Response
-This signal has been received and interpreted by the AVOT Engine.
-
-Next stage:
-- Route to appropriate AVOT
-- Execute domain-specific logic
-- Produce actionable artifact
-
----
-EOF
-
-              # Replace placeholders safely (mobile-safe trick)
-              sed -i "s/FILENAME/$filename/g" "$output"
-              sed -i "s/TIMESTAMP/$TIMESTAMP/g" "$output"
-              sed -i "s/TYPE/$TYPE/g" "$output"
-              sed -i "s/TITLE/$TITLE/g" "$output"
-              sed -i "s/SUMMARY/$SUMMARY/g" "$output"
-              sed -i "s/PRIORITY/$PRIORITY/g" "$output"
+              echo "# AVOT Execution Output" > "$output"
+              echo "" >> "$output"
+              echo "**File:** $filename" >> "$output"
+              echo "**Timestamp:** $TIMESTAMP" >> "$output"
+              echo "" >> "$output"
+              echo "## Parsed Signal" >> "$output"
+              echo "- Type: $TYPE" >> "$output"
+              echo "- Title: $TITLE" >> "$output"
+              echo "- Summary: $SUMMARY" >> "$output"
+              echo "- Priority: $PRIORITY" >> "$output"
+              echo "" >> "$output"
+              echo "## Engine Response" >> "$output"
+              echo "This signal has been received and interpreted by the AVOT Engine." >> "$output"
+              echo "" >> "$output"
+              echo "Next stage:" >> "$output"
+              echo "- Route to appropriate AVOT" >> "$output"
+              echo "- Execute domain-specific logic" >> "$output"
+              echo "- Produce actionable artifact" >> "$output"
+              echo "---" >> "$output"
 
             fi
           done
 
-          echo "=== ENGINE EXECUTION END ==="
+          echo "=== ENGINE END ==="
 
       - name: Commit outputs
         run: |
