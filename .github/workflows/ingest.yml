@@ -1,0 +1,32 @@
+name: Archivist Ingest
+
+on:
+  push:
+    paths:
+      - "incoming/**"
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Log new files
+        run: |
+          echo "New files detected:"
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }}
+
+      - name: Move files to processed
+        run: |
+          mkdir -p processed
+          mv incoming/* processed/ || true
+
+      - name: Commit processed files
+        run: |
+          git config user.name "codex-bot"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Processed incoming files" || echo "No changes"
+          git push
