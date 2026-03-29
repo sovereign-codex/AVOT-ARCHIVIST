@@ -1,64 +1,106 @@
 name: AVOT Engine Runner
 
+on:
+  push:
+    paths:
+      - 'processed/signals/*.json'
+
 permissions:
   contents: write
 
-on:
-  workflow_run:
-    workflows: ["Archivist Ingest"]
-    types:
-      - completed
-
 jobs:
   run-engine:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - run: mkdir -p outputs/signals
+      - name: Ensure output directories
+        run: |
+          mkdir -p outputs/signals
+          mkdir -p outputs/avot-core
+          mkdir -p outputs/avot-research
+          mkdir -p outputs/avot-guardian
 
-      - run: |
-          echo "=== ENGINE START ==="
+      - name: Process signals
+        run: |
+          echo "=== ENGINE C START ==="
 
           for file in processed/signals/*.json; do
-            if [ -f "$file" ]; then
+            [ -e "$file" ] || continue
 
-              filename=$(basename "$file" .json)
-              output="outputs/signals/$filename.md"
+            filename=$(basename "$file" .json)
+            output="outputs/signals/${filename}.md"
 
-              TYPE=$(jq -r '.type' "$file")
-              TITLE=$(jq -r '.title' "$file")
-              SUMMARY=$(jq -r '.summary' "$file")
-              PRIORITY=$(jq -r '.priority' "$file")
-              TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            TYPE=$(jq -r '.type' "$file")
+            TITLE=$(jq -r '.title' "$file")
+            SUMMARY=$(jq -r '.summary' "$file")
+            PRIORITY=$(jq -r '.priority' "$file")
 
-              echo "# AVOT Execution Output" > "$output"
-              echo "" >> "$output"
-              echo "**File:** $filename" >> "$output"
-              echo "**Timestamp:** $TIMESTAMP" >> "$output"
-              echo "" >> "$output"
-              echo "## Parsed Signal" >> "$output"
-              echo "- Type: $TYPE" >> "$output"
-              echo "- Title: $TITLE" >> "$output"
-              echo "- Summary: $SUMMARY" >> "$output"
-              echo "- Priority: $PRIORITY" >> "$output"
-              echo "" >> "$output"
-              echo "## Engine Response" >> "$output"
-              echo "Signal interpreted successfully." >> "$output"
-              echo "---" >> "$output"
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+            echo "Processing: $filename"
+            echo "Type: $TYPE | Priority: $PRIORITY"
+
+            # --- DECISION ENGINE ---
+            DEST="signals"
+            RESPONSE="Queued for standard processing"
+
+            if [ "$PRIORITY" = "high" ]; then
+              DEST="avot-guardian"
+              RESPONSE="Escalated to AVOT Guardian"
+            elif [ "$TYPE" = "research" ]; then
+              DEST="avot-research"
+              RESPONSE="Routed to AVOT Research"
+            elif [ "$TYPE" = "signal" ]; then
+              DEST="avot-core"
+              RESPONSE="Routed to AVOT Core"
             fi
+
+            routed_output="outputs/${DEST}/${filename}.md"
+
+            echo "Routing → $DEST"
+
+            cat <<EOF > "$routed_output"
+# AVOT Execution Output
+
+**File:** $filename  
+**Timestamp:** $TIMESTAMP  
+
+---
+
+## Parsed Signal
+
+- Type: $TYPE  
+- Title: $TITLE  
+- Summary: $SUMMARY  
+- Priority: $PRIORITY  
+
+---
+
+## Engine Decision
+
+$RESPONSE
+
+---
+
+## Next Actions
+
+- Routed to: $DEST
+- Awaiting AVOT-specific execution layer
+
+EOF
+
           done
 
-          echo "=== ENGINE END ==="
-
-      - run: |
+      - name: Commit outputs
+        run: |
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
+
           git add outputs/
-          git commit -m "Engine processed signals into outputs" || echo "No changes"
+
+          git commit -m "Engine C processed signals" || echo "No changes to commit"
+
           git push
