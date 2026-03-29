@@ -2,5 +2,5 @@
   "type": "signal",
   "title": "Test Signal",
   "summary": "Testing ingestion pipeline",
-  "priority": "low"
+  "priority": "high"
 }
