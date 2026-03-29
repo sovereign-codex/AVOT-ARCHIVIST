@@ -25,13 +25,12 @@ jobs:
 
       - name: Process signals
         run: |
-          echo "=== ENGINE C START ==="
+          echo "=== ENGINE C STABLE START ==="
 
           for file in processed/signals/*.json; do
             [ -e "$file" ] || continue
 
             filename=$(basename "$file" .json)
-            output="outputs/signals/${filename}.md"
 
             TYPE=$(jq -r '.type' "$file")
             TITLE=$(jq -r '.title' "$file")
@@ -40,10 +39,6 @@ jobs:
 
             TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-            echo "Processing: $filename"
-            echo "Type: $TYPE | Priority: $PRIORITY"
-
-            # --- DECISION ENGINE ---
             DEST="signals"
             RESPONSE="Queued for standard processing"
 
@@ -58,39 +53,27 @@ jobs:
               RESPONSE="Routed to AVOT Core"
             fi
 
-            routed_output="outputs/${DEST}/${filename}.md"
+            OUTPUT_FILE="outputs/${DEST}/${filename}.md"
 
-            echo "Routing → $DEST"
+            echo "Routing $filename → $DEST"
 
-            cat <<EOF > "$routed_output"
-# AVOT Execution Output
-
-**File:** $filename  
-**Timestamp:** $TIMESTAMP  
-
----
-
-## Parsed Signal
-
-- Type: $TYPE  
-- Title: $TITLE  
-- Summary: $SUMMARY  
-- Priority: $PRIORITY  
-
----
-
-## Engine Decision
-
-$RESPONSE
-
----
-
-## Next Actions
-
-- Routed to: $DEST
-- Awaiting AVOT-specific execution layer
-
-EOF
+            echo "# AVOT Execution Output" > "$OUTPUT_FILE"
+            echo "" >> "$OUTPUT_FILE"
+            echo "**File:** $filename" >> "$OUTPUT_FILE"
+            echo "**Timestamp:** $TIMESTAMP" >> "$OUTPUT_FILE"
+            echo "" >> "$OUTPUT_FILE"
+            echo "## Parsed Signal" >> "$OUTPUT_FILE"
+            echo "- Type: $TYPE" >> "$OUTPUT_FILE"
+            echo "- Title: $TITLE" >> "$OUTPUT_FILE"
+            echo "- Summary: $SUMMARY" >> "$OUTPUT_FILE"
+            echo "- Priority: $PRIORITY" >> "$OUTPUT_FILE"
+            echo "" >> "$OUTPUT_FILE"
+            echo "## Engine Decision" >> "$OUTPUT_FILE"
+            echo "$RESPONSE" >> "$OUTPUT_FILE"
+            echo "" >> "$OUTPUT_FILE"
+            echo "## Next Actions" >> "$OUTPUT_FILE"
+            echo "- Routed to: $DEST" >> "$OUTPUT_FILE"
+            echo "- Awaiting AVOT execution layer" >> "$OUTPUT_FILE"
 
           done
 
@@ -101,6 +84,6 @@ EOF
 
           git add outputs/
 
-          git commit -m "Engine C processed signals" || echo "No changes to commit"
+          git commit -m "Engine C stable run" || echo "No changes"
 
           git push
