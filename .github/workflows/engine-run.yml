@@ -1,12 +1,14 @@
 name: AVOT Engine Runner
 
 on:
-  push:
-    paths:
-      - 'processed/signals/**'
+  workflow_run:
+    workflows: ["Archivist Ingest"]
+    types:
+      - completed
 
 jobs:
   run-engine:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
