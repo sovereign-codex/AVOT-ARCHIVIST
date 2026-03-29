@@ -16,8 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Ensure outputs directory exists
-        run: |
-          mkdir -p outputs/signals
+        run: mkdir -p outputs/signals
 
       - name: Process signals and generate outputs
         run: |
@@ -29,7 +28,6 @@ jobs:
               filename=$(basename "$file" .json)
               output="outputs/signals/$filename.md"
 
-              echo ""
               echo "Processing: $file"
 
               TYPE=$(jq -r '.type' "$file")
@@ -39,19 +37,17 @@ jobs:
 
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-              echo "Generating output: $output"
-
-              cat <<EOF > "$output"
+              cat <<'EOF' > "$output"
 # AVOT Execution Output
 
-**File:** $filename  
-**Timestamp:** $TIMESTAMP  
+**File:** FILENAME  
+**Timestamp:** TIMESTAMP  
 
 ## Parsed Signal
-- Type: $TYPE
-- Title: $TITLE
-- Summary: $SUMMARY
-- Priority: $PRIORITY
+- Type: TYPE
+- Title: TITLE
+- Summary: SUMMARY
+- Priority: PRIORITY
 
 ## Engine Response
 This signal has been received and interpreted by the AVOT Engine.
@@ -64,6 +60,14 @@ Next stage:
 ---
 EOF
 
+              # Replace placeholders safely (mobile-safe trick)
+              sed -i "s/FILENAME/$filename/g" "$output"
+              sed -i "s/TIMESTAMP/$TIMESTAMP/g" "$output"
+              sed -i "s/TYPE/$TYPE/g" "$output"
+              sed -i "s/TITLE/$TITLE/g" "$output"
+              sed -i "s/SUMMARY/$SUMMARY/g" "$output"
+              sed -i "s/PRIORITY/$PRIORITY/g" "$output"
+
             fi
           done
 
@@ -75,5 +79,5 @@ EOF
           git config user.email "actions@github.com"
 
           git add outputs/
-          git commit -m "Engine processed signals into outputs" || echo "No changes to commit"
+          git commit -m "Engine processed signals into outputs" || echo "No changes"
           git push
