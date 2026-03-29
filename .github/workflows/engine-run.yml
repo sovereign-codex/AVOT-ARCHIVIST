@@ -15,25 +15,65 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: List processed signals
+      - name: Ensure outputs directory exists
         run: |
-          echo "=== PROCESSED SIGNAL FILES ==="
-          ls -R processed/signals || echo "No processed signals found"
+          mkdir -p outputs/signals
 
-      - name: Read and simulate AVOT execution
+      - name: Process signals and generate outputs
         run: |
-          echo "=== SIMULATED AVOT EXECUTION START ==="
+          echo "=== ENGINE EXECUTION START ==="
 
           for file in processed/signals/*.json; do
             if [ -f "$file" ]; then
+
+              filename=$(basename "$file" .json)
+              output="outputs/signals/$filename.md"
+
               echo ""
-              echo "Processing signal: $file"
-              echo "----------------------------------"
-              cat "$file"
-              echo ""
-              echo "→ AVOT would process this signal"
-              echo "----------------------------------"
+              echo "Processing: $file"
+
+              TYPE=$(jq -r '.type' "$file")
+              TITLE=$(jq -r '.title' "$file")
+              SUMMARY=$(jq -r '.summary' "$file")
+              PRIORITY=$(jq -r '.priority' "$file")
+
+              TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+              echo "Generating output: $output"
+
+              cat <<EOF > "$output"
+# AVOT Execution Output
+
+**File:** $filename  
+**Timestamp:** $TIMESTAMP  
+
+## Parsed Signal
+- Type: $TYPE
+- Title: $TITLE
+- Summary: $SUMMARY
+- Priority: $PRIORITY
+
+## Engine Response
+This signal has been received and interpreted by the AVOT Engine.
+
+Next stage:
+- Route to appropriate AVOT
+- Execute domain-specific logic
+- Produce actionable artifact
+
+---
+EOF
+
             fi
           done
 
-          echo "=== SIMULATED AVOT EXECUTION END ==="
+          echo "=== ENGINE EXECUTION END ==="
+
+      - name: Commit outputs
+        run: |
+          git config user.name "codex-bot"
+          git config user.email "actions@github.com"
+
+          git add outputs/
+          git commit -m "Engine processed signals into outputs" || echo "No changes to commit"
+          git push
