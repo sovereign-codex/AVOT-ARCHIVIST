@@ -1,0 +1,37 @@
+name: AVOT Engine Runner
+
+on:
+  push:
+    paths:
+      - 'processed/signals/**'
+
+jobs:
+  run-engine:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: List processed signals
+        run: |
+          echo "=== PROCESSED SIGNAL FILES ==="
+          ls -R processed/signals || echo "No processed signals found"
+
+      - name: Read and simulate AVOT execution
+        run: |
+          echo "=== SIMULATED AVOT EXECUTION START ==="
+
+          for file in processed/signals/*.json; do
+            if [ -f "$file" ]; then
+              echo ""
+              echo "Processing signal: $file"
+              echo "----------------------------------"
+              cat "$file"
+              echo ""
+              echo "→ AVOT would process this signal"
+              echo "----------------------------------"
+            fi
+          done
+
+          echo "=== SIMULATED AVOT EXECUTION END ==="
