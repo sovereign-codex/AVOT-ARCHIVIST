@@ -1,6 +1,6 @@
 {
   "type": "signal",
-  "title": "Test Signal 3",
+  "title": "Test Signal 4",
   "summary": "Testing ingestion pipeline",
   "priority": "low"
 }
