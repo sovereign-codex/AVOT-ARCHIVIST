@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "incoming/**"
+  workflow_dispatch:
 
 jobs:
   ingest:
@@ -13,15 +14,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Log new files
+      - name: Log incoming files
         run: |
-          echo "New files detected:"
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }}
+          echo "Incoming files:"
+          ls -R incoming || echo "No incoming files"
 
-      - name: Move files to processed
+      - name: Copy files to processed
         run: |
           mkdir -p processed
-          mv incoming/* processed/ || true
+          cp -r incoming/* processed/ 2>/dev/null || echo "Nothing to copy"
 
       - name: Commit processed files
         run: |
