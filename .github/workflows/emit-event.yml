@@ -1,0 +1,108 @@
+name: Archivist Emit Event
+
+on:
+  workflow_run:
+    workflows: ["Archivist Ingest"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  emit-event:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Ensure events directory exists
+        run: mkdir -p processed/events
+
+      - name: Emit canonical events from processed signals
+        run: |
+          echo "=== EMIT EVENT START ==="
+
+          for file in processed/signals/*.json; do
+            [ -e "$file" ] || continue
+
+            filename=$(basename "$file" .json)
+            event_file="processed/events/evt_${filename}.json"
+
+            SIGNAL_ID="sig_${filename}"
+            EVENT_ID="evt_${filename}"
+            TRACE_ID="trc_${filename}"
+            CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+            TYPE=$(jq -r '.type // "signal"' "$file")
+            TITLE=$(jq -r '.title // "Untitled Signal"' "$file")
+            SUMMARY=$(jq -r '.summary // ""' "$file")
+            PRIORITY=$(jq -r '.priority // "low"' "$file")
+
+            jq -n \
+              --arg event_id "$EVENT_ID" \
+              --arg trace_id "$TRACE_ID" \
+              --arg created_at "$CREATED_AT" \
+              --arg source_repo "AVOT-ARCHIVIST" \
+              --arg source_workflow "Archivist Emit Event" \
+              --arg source_path "$file" \
+              --arg target_repo "AVOT-engine-core" \
+              --arg target_workflow "Engine Runner" \
+              --arg target_avot "AVOT-Core" \
+              --arg signal_id "$SIGNAL_ID" \
+              --arg type "$TYPE" \
+              --arg title "$TITLE" \
+              --arg summary "$SUMMARY" \
+              --arg priority "$PRIORITY" \
+              '{
+                event_id: $event_id,
+                trace_id: $trace_id,
+                event_type: "signal.ingested",
+                schema_version: "1.0",
+                created_at: $created_at,
+                source: {
+                  repo: $source_repo,
+                  workflow: $source_workflow,
+                  path: $source_path
+                },
+                routing: {
+                  target_repo: $target_repo,
+                  target_workflow: $target_workflow,
+                  target_avot: $target_avot
+                },
+                payload: {
+                  signal_id: $signal_id,
+                  type: $type,
+                  title: $title,
+                  summary: $summary,
+                  priority: $priority,
+                  content_path: $source_path
+                },
+                governance: {
+                  value_profile: "default",
+                  invariant_profile: "default",
+                  review_required: false
+                },
+                status: {
+                  state: "new",
+                  decision: null,
+                  error: null
+                }
+              }' > "$event_file"
+
+            echo "Wrote $event_file"
+          done
+
+          echo "=== EMIT EVENT END ==="
+
+      - name: Commit emitted events
+        run: |
+          git config user.name "codex-bot"
+          git config user.email "actions@github.com"
+          git add processed/events/
+          git commit -m "Emit canonical signal events" || echo "No changes"
+          git push
