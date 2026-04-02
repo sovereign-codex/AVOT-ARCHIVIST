@@ -1,15 +1,17 @@
 name: AVOT Engine Runner
 
 on:
-  push:
-    paths:
-      - 'processed/signals/*.json'
+  workflow_run:
+    workflows: ["Archivist Ingest"]
+    types:
+      - completed
 
 permissions:
   contents: write
 
 jobs:
   run-engine:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -23,6 +25,10 @@ jobs:
           mkdir -p outputs/avot-research
           mkdir -p outputs/avot-guardian
 
+      - name: Pull latest changes (IMPORTANT)
+        run: |
+          git pull origin main
+
       - name: Process signals
         run: |
           echo "=== ENGINE C STABLE START ==="
@@ -32,10 +38,10 @@ jobs:
 
             filename=$(basename "$file" .json)
 
-            TYPE=$(jq -r '.type' "$file")
-            TITLE=$(jq -r '.title' "$file")
-            SUMMARY=$(jq -r '.summary' "$file")
-            PRIORITY=$(jq -r '.priority' "$file")
+            TYPE=$(jq -r '.type // "unknown"' "$file")
+            TITLE=$(jq -r '.title // "Untitled"' "$file")
+            SUMMARY=$(jq -r '.summary // "No summary"' "$file")
+            PRIORITY=$(jq -r '.priority // "low"' "$file")
 
             TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
