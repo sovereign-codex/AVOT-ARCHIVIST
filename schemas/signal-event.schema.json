@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Codex Signal Event",
+  "type": "object",
+  "required": [
+    "event_id",
+    "trace_id",
+    "event_type",
+    "schema_version",
+    "created_at",
+    "source",
+    "routing",
+    "payload",
+    "status"
+  ],
+  "properties": {
+    "event_id": { "type": "string" },
+    "trace_id": { "type": "string" },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "signal.received",
+        "signal.ingested",
+        "signal.routed",
+        "signal.rejected"
+      ]
+    },
+    "schema_version": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+
+    "source": {
+      "type": "object",
+      "required": ["repo", "workflow", "path"],
+      "properties": {
+        "repo": { "type": "string" },
+        "workflow": { "type": "string" },
+        "path": { "type": "string" }
+      }
+    },
+
+    "routing": {
+      "type": "object",
+      "required": ["target_repo", "target_workflow"],
+      "properties": {
+        "target_repo": { "type": "string" },
+        "target_workflow": { "type": "string" },
+        "target_avot": { "type": ["string", "null"] }
+      }
+    },
+
+    "payload": {
+      "type": "object",
+      "required": ["signal_id", "type", "title"],
+      "properties": {
+        "signal_id": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "content_path": { "type": "string" }
+      }
+    },
+
+    "governance": {
+      "type": "object",
+      "properties": {
+        "value_profile": { "type": "string" },
+        "invariant_profile": { "type": "string" },
+        "review_required": { "type": "boolean" }
+      }
+    },
+
+    "status": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": { "type": "string" },
+        "decision": { "type": ["string", "null"] },
+        "error": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
