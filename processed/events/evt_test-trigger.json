@@ -1,0 +1,35 @@
+{
+  "event_id": "evt_test-trigger",
+  "trace_id": "trc_test-trigger",
+  "event_type": "signal.ingested",
+  "schema_version": "1.0",
+  "created_at": "2026-04-02T02:57:54Z",
+  "source": {
+    "repo": "AVOT-ARCHIVIST",
+    "workflow": "Archivist Emit Event",
+    "path": "processed/signals/test-trigger.json"
+  },
+  "routing": {
+    "target_repo": "AVOT-engine-core",
+    "target_workflow": "Engine Runner",
+    "target_avot": "AVOT-Core"
+  },
+  "payload": {
+    "signal_id": "sig_test-trigger",
+    "type": "research",
+    "title": "Engine Trigger Validation",
+    "summary": "Testing workflow_run chain from Archivist → Engine",
+    "priority": "medium",
+    "content_path": "processed/signals/test-trigger.json"
+  },
+  "governance": {
+    "value_profile": "default",
+    "invariant_profile": "default",
+    "review_required": false
+  },
+  "status": {
+    "state": "new",
+    "decision": null,
+    "error": null
+  }
+}
