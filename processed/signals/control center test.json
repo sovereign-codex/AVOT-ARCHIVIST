@@ -1,0 +1,6 @@
+{
+  "type": "signal",
+  "title": "Control Center Test",
+  "summary": "Testing full pipeline",
+  "priority": "low"
+}
