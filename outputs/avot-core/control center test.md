@@ -1,12 +1,12 @@
 # AVOT Execution Output
 
-**File:** test-signal
+**File:** control center test
 **Timestamp:** 2026-04-03T14:16:22Z
 
 ## Parsed Signal
 - Type: signal
-- Title: Test Signal 7
-- Summary: Testing ingestion pipeline
+- Title: Control Center Test
+- Summary: Testing full pipeline
 - Priority: low
 
 ## Engine Decision
