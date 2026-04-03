@@ -1,13 +1,13 @@
 {
-  "event_id": "evt_test-signal",
-  "trace_id": "trc_test-signal",
+  "event_id": "evt_control center test",
+  "trace_id": "trc_control center test",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
   "created_at": "2026-04-03T14:16:21Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
-    "path": "processed/signals/test-signal.json"
+    "path": "processed/signals/control center test.json"
   },
   "routing": {
     "target_repo": "AVOT-engine-core",
@@ -15,12 +15,12 @@
     "target_avot": "AVOT-Core"
   },
   "payload": {
-    "signal_id": "sig_test-signal",
+    "signal_id": "sig_control center test",
     "type": "signal",
-    "title": "Test Signal 7",
-    "summary": "Testing ingestion pipeline",
+    "title": "Control Center Test",
+    "summary": "Testing full pipeline",
     "priority": "low",
-    "content_path": "processed/signals/test-signal.json"
+    "content_path": "processed/signals/control center test.json"
   },
   "governance": {
     "value_profile": "default",
