@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout Archivist repo
         uses: actions/checkout@v4
 
       - name: Ensure output directories
@@ -25,7 +25,7 @@ jobs:
           mkdir -p outputs/avot-research
           mkdir -p outputs/avot-guardian
 
-      - name: Pull latest changes (IMPORTANT)
+      - name: Pull latest changes
         run: |
           git pull origin main
 
@@ -33,10 +33,18 @@ jobs:
         run: |
           echo "=== ENGINE C STABLE START ==="
 
-          for file in processed/signals/*.json; do
-            [ -e "$file" ] || continue
+          shopt -s nullglob
 
-            filename=$(basename "$file" .json)
+          for file in processed/signals/*; do
+            [ -f "$file" ] || continue
+
+            case "$file" in
+              *.json|*.JSON) ;;
+              *) continue ;;
+            esac
+
+            filename=$(basename "$file")
+            base="${filename%.*}"
 
             TYPE=$(jq -r '.type // "unknown"' "$file")
             TITLE=$(jq -r '.title // "Untitled"' "$file")
@@ -59,13 +67,13 @@ jobs:
               RESPONSE="Routed to AVOT Core"
             fi
 
-            OUTPUT_FILE="outputs/${DEST}/${filename}.md"
+            OUTPUT_FILE="outputs/${DEST}/${base}.md"
 
-            echo "Routing $filename → $DEST"
+            echo "Routing $base -> $DEST"
 
             echo "# AVOT Execution Output" > "$OUTPUT_FILE"
             echo "" >> "$OUTPUT_FILE"
-            echo "**File:** $filename" >> "$OUTPUT_FILE"
+            echo "**File:** $base" >> "$OUTPUT_FILE"
             echo "**Timestamp:** $TIMESTAMP" >> "$OUTPUT_FILE"
             echo "" >> "$OUTPUT_FILE"
             echo "## Parsed Signal" >> "$OUTPUT_FILE"
@@ -83,13 +91,109 @@ jobs:
 
           done
 
-      - name: Commit outputs
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.CODEX_APP_ID }}
+          private-key: ${{ secrets.CODEX_APP_PRIVATE_KEY }}
+          owner: sovereign-codex
+          repositories: |
+            Codex-control-center
+
+      - name: Checkout Control Center repo
+        uses: actions/checkout@v4
+        with:
+          repository: sovereign-codex/Codex-control-center
+          token: ${{ steps.app-token.outputs.token }}
+          path: control-center
+
+      - name: Write handoff files into Control Center
+        run: |
+          mkdir -p control-center/incoming
+
+          shopt -s nullglob
+
+          for file in processed/signals/*; do
+            [ -f "$file" ] || continue
+
+            case "$file" in
+              *.json|*.JSON) ;;
+              *) continue ;;
+            esac
+
+            filename=$(basename "$file")
+            base="${filename%.*}"
+
+            TYPE=$(jq -r '.type // "unknown"' "$file")
+            TITLE=$(jq -r '.title // "Untitled"' "$file")
+            SUMMARY=$(jq -r '.summary // "No summary"' "$file")
+            PRIORITY=$(jq -r '.priority // "low"' "$file")
+
+            DEST="signals"
+
+            if [ "$PRIORITY" = "high" ]; then
+              DEST="avot-guardian"
+            elif [ "$TYPE" = "research" ]; then
+              DEST="avot-research"
+            elif [ "$TYPE" = "signal" ]; then
+              DEST="avot-core"
+            fi
+
+            safe_name=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+            handoff_file="control-center/incoming/${safe_name}.json"
+
+            jq -n \
+              --arg handoff_id "handoff_${safe_name}" \
+              --arg trace_id "trc_${safe_name}" \
+              --arg source_repo "AVOT-ARCHIVIST" \
+              --arg source_workflow "AVOT Engine Runner" \
+              --arg source_signal "$filename" \
+              --arg type "$TYPE" \
+              --arg title "$TITLE" \
+              --arg summary "$SUMMARY" \
+              --arg priority "$PRIORITY" \
+              --arg route "$DEST" \
+              '{
+                handoff_id: $handoff_id,
+                trace_id: $trace_id,
+                event_type: "decision.proposed",
+                source: {
+                  repo: $source_repo,
+                  workflow: $source_workflow,
+                  signal_file: $source_signal
+                },
+                payload: {
+                  type: $type,
+                  title: $title,
+                  summary: $summary,
+                  priority: $priority
+                },
+                routing: {
+                  route: $route,
+                  target_repo: "Codex-control-center"
+                }
+              }' > "$handoff_file"
+
+            echo "Wrote $handoff_file"
+          done
+
+      - name: Commit to Control Center
+        run: |
+          cd control-center
+
+          git config user.name "codex-app"
+          git config user.email "actions@github.com"
+
+          git add incoming/
+          git commit -m "Incoming engine handoff from Archivist" || echo "No changes"
+          git push
+
+      - name: Commit local outputs
         run: |
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
 
           git add outputs/
-
           git commit -m "Engine C stable run" || echo "No changes"
-
           git push
