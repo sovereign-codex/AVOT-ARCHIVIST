@@ -1,13 +1,13 @@
 {
-  "event_id": "evt_control center test",
-  "trace_id": "trc_control center test",
+  "event_id": "evt_interlink-test",
+  "trace_id": "trc_interlink-test",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
   "created_at": "2026-04-06T03:38:59Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
-    "path": "processed/signals/control center test.json"
+    "path": "processed/signals/interlink-test.json"
   },
   "routing": {
     "target_repo": "AVOT-engine-core",
@@ -15,12 +15,12 @@
     "target_avot": "AVOT-Core"
   },
   "payload": {
-    "signal_id": "sig_control center test",
-    "type": "signal",
-    "title": "Control Center Test",
-    "summary": "Testing full pipeline",
-    "priority": "low",
-    "content_path": "processed/signals/control center test.json"
+    "signal_id": "sig_interlink-test",
+    "type": "research",
+    "title": "Inter-Repo Activation Test",
+    "summary": "Testing Archivist → Engine → Control Center handoff",
+    "priority": "medium",
+    "content_path": "processed/signals/interlink-test.json"
   },
   "governance": {
     "value_profile": "default",
