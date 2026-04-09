@@ -189,15 +189,19 @@ jobs:
 
           git add incoming/
           git commit -m "Incoming engine handoff from Archivist" || echo "No changes"
-          git push
+
+          git pull origin main --rebase || echo "No remote changes"
+
+          git push origin main
 
       - name: Commit local outputs
         run: |
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
 
-          git pull origin main --rebase || echo "No remote changes"
-
           git add outputs/
           git commit -m "Engine C stable run" || echo "No changes"
-          git push
+
+          git pull origin main --rebase || echo "No remote changes"
+
+          git push origin main
