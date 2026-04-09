@@ -3,7 +3,7 @@
   "trace_id": "trc_interlink-test",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
-  "created_at": "2026-04-09T02:46:11Z",
+  "created_at": "2026-04-09T03:27:30Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
@@ -17,7 +17,7 @@
   "payload": {
     "signal_id": "sig_interlink-test",
     "type": "research",
-    "title": "Inter-Repo Activation Test 5",
+    "title": "Inter-Repo Activation Test AVOT engine",
     "summary": "Testing Archivist → Engine → Control Center handoff",
     "priority": "medium",
     "content_path": "processed/signals/interlink-test.json"
