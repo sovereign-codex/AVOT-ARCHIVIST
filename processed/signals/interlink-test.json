@@ -1,6 +1,6 @@
 {
   "type": "research",
-  "title": "Inter-Repo Activation Test 2",
+  "title": "Inter-Repo Activation Test 3",
   "summary": "Testing Archivist → Engine → Control Center handoff",
   "priority": "medium"
 }
