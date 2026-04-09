@@ -1,11 +1,11 @@
 # AVOT Execution Output
 
 **File:** interlink-test
-**Timestamp:** 2026-04-09T05:55:52Z
+**Timestamp:** 2026-04-09T13:52:46Z
 
 ## Parsed Signal
 - Type: research
-- Title: Inter-Repo Activation Test AVOT engine
+- Title: Inter-Repo Activation Test 2 AVOT engine
 - Summary: Testing Archivist → Engine → Control Center handoff
 - Priority: medium
 
