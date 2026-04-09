@@ -1,6 +1,6 @@
 {
   "type": "research",
-  "title": "Inter-Repo Activation Test AVOT engine",
+  "title": "Inter-Repo Activation Test 2 AVOT engine",
   "summary": "Testing Archivist → Engine → Control Center handoff",
   "priority": "medium"
 }
