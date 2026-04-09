@@ -3,7 +3,7 @@
   "trace_id": "trc_test-trigger",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
-  "created_at": "2026-04-06T03:38:59Z",
+  "created_at": "2026-04-09T01:00:02Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
