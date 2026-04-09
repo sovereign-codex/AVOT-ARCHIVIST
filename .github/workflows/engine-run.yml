@@ -27,7 +27,7 @@ jobs:
 
       - name: Pull latest changes
         run: |
-          git pull origin main
+          git pull origin main --rebase || echo "No remote changes"
 
       - name: Process signals
         run: |
@@ -185,6 +185,8 @@ jobs:
           git config user.name "codex-app"
           git config user.email "actions@github.com"
 
+          git pull origin main --rebase || echo "No remote changes"
+
           git add incoming/
           git commit -m "Incoming engine handoff from Archivist" || echo "No changes"
           git push
@@ -193,6 +195,8 @@ jobs:
         run: |
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
+
+          git pull origin main --rebase || echo "No remote changes"
 
           git add outputs/
           git commit -m "Engine C stable run" || echo "No changes"
