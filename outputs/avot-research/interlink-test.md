@@ -1,12 +1,12 @@
 # AVOT Execution Output
 
-**File:** test-trigger
+**File:** interlink-test
 **Timestamp:** 2026-04-09T02:46:12Z
 
 ## Parsed Signal
 - Type: research
-- Title: Engine Trigger Validation
-- Summary: Testing workflow_run chain from Archivist → Engine
+- Title: Inter-Repo Activation Test 5
+- Summary: Testing Archivist → Engine → Control Center handoff
 - Priority: medium
 
 ## Engine Decision
