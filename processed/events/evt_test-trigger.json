@@ -3,7 +3,7 @@
   "trace_id": "trc_test-trigger",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
-  "created_at": "2026-04-16T05:02:22Z",
+  "created_at": "2026-04-16T05:16:49Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
@@ -17,7 +17,7 @@
   "payload": {
     "signal_id": "sig_test-trigger",
     "type": "research",
-    "title": "Engine Trigger Validation",
+    "title": "Engine Trigger Validation 101",
     "summary": "Testing workflow_run chain from Archivist → Engine",
     "priority": "medium",
     "content_path": "processed/signals/test-trigger.json"
