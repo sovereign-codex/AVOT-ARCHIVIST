@@ -31,7 +31,7 @@ jobs:
         run: |
           TRACE="engine_${{ github.run_id }}"
 
-          curl -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
+          curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
             -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
             -H "Accept: application/vnd.github+json" \
             -d "{
@@ -46,64 +46,54 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p outputs/signals
           mkdir -p outputs/avot-core
-          mkdir -p outputs/avot-research
-          mkdir -p outputs/avot-guardian
-
-      - name: Pull latest changes
-        run: |
-          git pull origin main --rebase || echo "No remote changes"
+          mkdir -p outputs/archivist
+          mkdir -p outputs/control-center
 
       - name: Process signals
         run: |
           echo "=== ENGINE START ==="
-
           shopt -s nullglob
 
           for file in processed/signals/*; do
             [ -f "$file" ] || continue
 
-            case "$file" in
-              *.json|*.JSON) ;;
-              *) continue ;;
-            esac
-
             filename=$(basename "$file")
             base="${filename%.*}"
 
             TYPE=$(jq -r '.type // "unknown"' "$file")
-            TITLE=$(jq -r '.title // "Untitled"' "$file")
-            SUMMARY=$(jq -r '.summary // "No summary"' "$file")
             PRIORITY=$(jq -r '.priority // "low"' "$file")
 
-            # ✅ PRESERVE TRACE IF EXISTS
             TRACE=$(jq -r '.trace_id // empty' "$file")
             if [ -z "$TRACE" ]; then
               TRACE="trc_${base}"
             fi
 
-            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            # 🔒 ROUTE (REAL REPO NAME)
+            ROUTE="Codex-control-center"
 
-            DEST="signals"
+            # 🔧 INTERNAL DEST
+            FS_DEST="control-center"
 
-            if [ "$PRIORITY" = "high" ]; then
-              DEST="AVOT-guardian"
-            elif [ "$TYPE" = "research" ]; then
-              DEST="AVOT-research"
-            elif [ "$TYPE" = "signal" ]; then
-              DEST="AVOT-engine-core-"
+            if [ "$TYPE" = "signal" ]; then
+              ROUTE="AVOT-engine-core-"
+              FS_DEST="avot-core"
+            elif [ "$TYPE" = "archival" ]; then
+              ROUTE="AVOT-ARCHIVIST"
+              FS_DEST="archivist"
             fi
 
-            OUTPUT_FILE="outputs/${DEST}/${base}.md"
+            mkdir -p "outputs/${FS_DEST}"
 
-            echo "Routing $base -> $DEST (trace: $TRACE)"
+            OUTPUT_FILE="outputs/${FS_DEST}/${base}.md"
+
+            echo "Routing $base → $ROUTE (trace: $TRACE)"
 
             echo "# AVOT Execution Output" > "$OUTPUT_FILE"
             echo "**Trace:** $TRACE" >> "$OUTPUT_FILE"
 
-            # 🔥 TRACE PER SIGNAL
-            curl -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
+            # 🔥 TRACE: routing
+            curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
               -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
               -H "Accept: application/vnd.github+json" \
               -d "{
@@ -112,20 +102,20 @@ jobs:
                   \"trace_id\": \"$TRACE\",
                   \"repo\": \"${{ github.repository }}\",
                   \"workflow\": \"engine\",
-                  \"status\": \"routed:$DEST\"
+                  \"status\": \"routed:$ROUTE\"
                 }
               }"
 
           done
 
-      - name: Checkout Control Center repo
+      - name: Checkout Control Center
         uses: actions/checkout@v4
         with:
           repository: sovereign-codex/Codex-control-center
           token: ${{ steps.app-token.outputs.token }}
           path: control-center
 
-      - name: Write handoff files into Control Center
+      - name: Write decisions
         run: |
           mkdir -p control-center/queue/decisions
 
@@ -138,75 +128,39 @@ jobs:
             base="${filename%.*}"
 
             TYPE=$(jq -r '.type // "unknown"' "$file")
-            PRIORITY=$(jq -r '.priority // "low"' "$file")
 
             TRACE=$(jq -r '.trace_id // empty' "$file")
             if [ -z "$TRACE" ]; then
               TRACE="trc_${base}"
             fi
 
-            DEST="unknown"
+            ROUTE="Codex-control-center"
 
-            if [ "$PRIORITY" = "high" ]; then
-              DEST="AVOT-guardian"
-            elif [ "$TYPE" = "research" ]; then
-              DEST="AVOT-research"
-            elif [ "$TYPE" = "signal" ]; then
-              DEST="AVOT-engine-core-"
+            if [ "$TYPE" = "signal" ]; then
+              ROUTE="AVOT-engine-core-"
+            elif [ "$TYPE" = "archival" ]; then
+              ROUTE="AVOT-ARCHIVIST"
             fi
 
             safe_name=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
 
-            handoff_file="control-center/queue/decisions/${safe_name}.json"
-
             jq -n \
               --arg trace_id "$TRACE" \
-              --arg route "$DEST" \
+              --arg route "$ROUTE" \
               '{
                 trace_id: $trace_id,
                 decision: {
                   route: $route
                 }
-              }' > "$handoff_file"
-
-            echo "Wrote $handoff_file"
-
-            # 🔥 TRACE: decision created
-            curl -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
-              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-              -H "Accept: application/vnd.github+json" \
-              -d "{
-                \"event_type\": \"trace_log\",
-                \"client_payload\": {
-                  \"trace_id\": \"$TRACE\",
-                  \"repo\": \"control-center\",
-                  \"workflow\": \"engine\",
-                  \"status\": \"decision_created\"
-                }
-              }"
+              }' > "control-center/queue/decisions/${safe_name}.json"
 
           done
 
-      - name: Commit to Control Center
+      - name: Commit decisions
         run: |
           cd control-center
-
           git config user.name "codex-app"
           git config user.email "actions@github.com"
-
-          git pull origin main --rebase || echo "No remote changes"
-
           git add queue/decisions/
           git commit -m "Engine decisions" || echo "No changes"
-
-          git push origin main
-
-      - name: Commit local outputs
-        run: |
-          git config user.name "codex-bot"
-          git config user.email "actions@github.com"
-
-          git add outputs/
-          git commit -m "Engine run" || echo "No changes"
-
-          git push origin main
+          git push
