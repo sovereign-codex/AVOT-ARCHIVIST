@@ -30,17 +30,19 @@ jobs:
             Codex-control-center
 
       - name: Emit trace (engine start)
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          TRACE="engine_${{ github.run_id }}"
+          TRACE="engine_${GITHUB_RUN_ID}"
 
           curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
-            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d "{
               \"event_type\": \"trace_log\",
               \"client_payload\": {
                 \"trace_id\": \"$TRACE\",
-                \"repo\": \"${{ github.repository }}\",
+                \"repo\": \"${GITHUB_REPOSITORY}\",
                 \"workflow\": \"engine\",
                 \"status\": \"started\"
               }
@@ -52,7 +54,13 @@ jobs:
           mkdir -p outputs/archivist
           mkdir -p outputs/control-center
 
+      - name: Pull latest changes
+        run: |
+          git pull origin main --rebase || echo "No remote changes"
+
       - name: Process signals
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           echo "=== ENGINE START ==="
           shopt -s nullglob
@@ -92,22 +100,24 @@ jobs:
 
             echo "Routing $base -> $ROUTE (trace: $TRACE)"
 
-            echo "# AVOT Execution Output" > "$OUTPUT_FILE"
-            echo "" >> "$OUTPUT_FILE"
-            echo "**Trace:** $TRACE" >> "$OUTPUT_FILE"
-            echo "**Source File:** $filename" >> "$OUTPUT_FILE"
-            echo "**Route:** $ROUTE" >> "$OUTPUT_FILE"
-            echo "**Type:** $TYPE" >> "$OUTPUT_FILE"
-            echo "**Priority:** $PRIORITY" >> "$OUTPUT_FILE"
+            {
+              echo "# AVOT Execution Output"
+              echo ""
+              echo "**Trace:** $TRACE"
+              echo "**Source File:** $filename"
+              echo "**Route:** $ROUTE"
+              echo "**Type:** $TYPE"
+              echo "**Priority:** $PRIORITY"
+            } > "$OUTPUT_FILE"
 
             curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
-              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+              -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -d "{
                 \"event_type\": \"trace_log\",
                 \"client_payload\": {
                   \"trace_id\": \"$TRACE\",
-                  \"repo\": \"${{ github.repository }}\",
+                  \"repo\": \"${GITHUB_REPOSITORY}\",
                   \"workflow\": \"engine\",
                   \"status\": \"routed:$ROUTE\"
                 }
@@ -122,6 +132,8 @@ jobs:
           path: control-center
 
       - name: Write decisions
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           mkdir -p control-center/queue/decisions
 
@@ -154,11 +166,12 @@ jobs:
             fi
 
             safe_name=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+            decision_file="control-center/queue/decisions/${safe_name}.json"
 
             jq -n \
               --arg trace_id "$TRACE" \
               --arg route "$ROUTE" \
-              --arg source_repo "${{ github.repository }}" \
+              --arg source_repo "${GITHUB_REPOSITORY}" \
               --arg source_file "$filename" \
               '{
                 trace_id: $trace_id,
@@ -169,10 +182,12 @@ jobs:
                   repo: $source_repo,
                   file: $source_file
                 }
-              }' > "control-center/queue/decisions/${safe_name}.json"
+              }' > "$decision_file"
+
+            echo "Wrote $decision_file"
 
             curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
-              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+              -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -d "{
                 \"event_type\": \"trace_log\",
@@ -188,28 +203,42 @@ jobs:
       - name: Commit decisions
         run: |
           cd control-center
+
           git config user.name "codex-app"
           git config user.email "actions@github.com"
+
           git pull origin main --rebase || echo "No remote changes"
+
           git add queue/decisions/
           git commit -m "Engine decisions" || echo "No changes"
+
+          git pull origin main --rebase || echo "No remote changes"
+
           git push origin main
 
       - name: Trigger Dispatcher
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          curl -s -X POST https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
-            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+          RESPONSE=$(curl -s -o response.txt -w "%{http_code}" -X POST \
+            https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d '{
               "event_type": "engine_handoff"
-            }'
+            }')
+
+          echo "HTTP Status: $RESPONSE"
+          cat response.txt || true
 
       - name: Emit trace (dispatcher triggered)
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          TRACE="engine_${{ github.run_id }}"
+          TRACE="engine_${GITHUB_RUN_ID}"
 
           curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
-            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d "{
               \"event_type\": \"trace_log\",
@@ -225,7 +254,10 @@ jobs:
         run: |
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
-          git pull origin main --rebase || echo "No remote changes"
+
           git add outputs/
           git commit -m "Engine run" || echo "No changes"
+
+          git pull origin main --rebase || echo "No remote changes"
+
           git push origin main
