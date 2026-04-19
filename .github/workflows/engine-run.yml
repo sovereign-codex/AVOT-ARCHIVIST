@@ -25,8 +25,10 @@ jobs:
           app-id: ${{ secrets.CODEX_APP_ID }}
           private-key: ${{ secrets.CODEX_APP_PRIVATE_KEY }}
           owner: sovereign-codex
+          repositories: |
+            AVOT-TRACE
+            Codex-control-center
 
-      # 🔥 TRACE: engine start
       - name: Emit trace (engine start)
         run: |
           TRACE="engine_${{ github.run_id }}"
@@ -58,6 +60,11 @@ jobs:
           for file in processed/signals/*; do
             [ -f "$file" ] || continue
 
+            case "$file" in
+              *.json|*.JSON) ;;
+              *) continue ;;
+            esac
+
             filename=$(basename "$file")
             base="${filename%.*}"
 
@@ -69,10 +76,7 @@ jobs:
               TRACE="trc_${base}"
             fi
 
-            # 🔒 ROUTE (REAL REPO NAME)
             ROUTE="Codex-control-center"
-
-            # 🔧 INTERNAL DEST
             FS_DEST="control-center"
 
             if [ "$TYPE" = "signal" ]; then
@@ -84,15 +88,18 @@ jobs:
             fi
 
             mkdir -p "outputs/${FS_DEST}"
-
             OUTPUT_FILE="outputs/${FS_DEST}/${base}.md"
 
-            echo "Routing $base → $ROUTE (trace: $TRACE)"
+            echo "Routing $base -> $ROUTE (trace: $TRACE)"
 
             echo "# AVOT Execution Output" > "$OUTPUT_FILE"
+            echo "" >> "$OUTPUT_FILE"
             echo "**Trace:** $TRACE" >> "$OUTPUT_FILE"
+            echo "**Source File:** $filename" >> "$OUTPUT_FILE"
+            echo "**Route:** $ROUTE" >> "$OUTPUT_FILE"
+            echo "**Type:** $TYPE" >> "$OUTPUT_FILE"
+            echo "**Priority:** $PRIORITY" >> "$OUTPUT_FILE"
 
-            # 🔥 TRACE: routing
             curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
               -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
               -H "Accept: application/vnd.github+json" \
@@ -105,7 +112,6 @@ jobs:
                   \"status\": \"routed:$ROUTE\"
                 }
               }"
-
           done
 
       - name: Checkout Control Center
@@ -123,6 +129,11 @@ jobs:
 
           for file in processed/signals/*; do
             [ -f "$file" ] || continue
+
+            case "$file" in
+              *.json|*.JSON) ;;
+              *) continue ;;
+            esac
 
             filename=$(basename "$file")
             base="${filename%.*}"
@@ -147,13 +158,31 @@ jobs:
             jq -n \
               --arg trace_id "$TRACE" \
               --arg route "$ROUTE" \
+              --arg source_repo "${{ github.repository }}" \
+              --arg source_file "$filename" \
               '{
                 trace_id: $trace_id,
                 decision: {
                   route: $route
+                },
+                source: {
+                  repo: $source_repo,
+                  file: $source_file
                 }
               }' > "control-center/queue/decisions/${safe_name}.json"
 
+            curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
+              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+              -H "Accept: application/vnd.github+json" \
+              -d "{
+                \"event_type\": \"trace_log\",
+                \"client_payload\": {
+                  \"trace_id\": \"$TRACE\",
+                  \"repo\": \"sovereign-codex/Codex-control-center\",
+                  \"workflow\": \"engine\",
+                  \"status\": \"decision_created\"
+                }
+              }"
           done
 
       - name: Commit decisions
@@ -161,6 +190,42 @@ jobs:
           cd control-center
           git config user.name "codex-app"
           git config user.email "actions@github.com"
+          git pull origin main --rebase || echo "No remote changes"
           git add queue/decisions/
           git commit -m "Engine decisions" || echo "No changes"
-          git push
+          git push origin main
+
+      - name: Trigger Dispatcher
+        run: |
+          curl -s -X POST https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
+            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            -d '{
+              "event_type": "engine_handoff"
+            }'
+
+      - name: Emit trace (dispatcher triggered)
+        run: |
+          TRACE="engine_${{ github.run_id }}"
+
+          curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
+            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{
+              \"event_type\": \"trace_log\",
+              \"client_payload\": {
+                \"trace_id\": \"$TRACE\",
+                \"repo\": \"sovereign-codex/Codex-control-center\",
+                \"workflow\": \"engine\",
+                \"status\": \"dispatcher_triggered\"
+              }
+            }"
+
+      - name: Commit local outputs
+        run: |
+          git config user.name "codex-bot"
+          git config user.email "actions@github.com"
+          git pull origin main --rebase || echo "No remote changes"
+          git add outputs/
+          git commit -m "Engine run" || echo "No changes"
+          git push origin main
