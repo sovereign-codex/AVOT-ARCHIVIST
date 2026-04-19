@@ -1,17 +1,7 @@
 # AVOT Execution Output
 
-**File:** control center test
-**Timestamp:** 2026-04-09T13:52:46Z
-
-## Parsed Signal
-- Type: signal
-- Title: Control Center avot Test 2
-- Summary: Testing full pipeline
-- Priority: low
-
-## Engine Decision
-Routed to AVOT Core
-
-## Next Actions
-- Routed to: avot-core
-- Awaiting AVOT execution layer
+**Trace:** trc_control center test
+**Source File:** control center test.json
+**Route:** AVOT-engine-core-
+**Type:** signal
+**Priority:** low
