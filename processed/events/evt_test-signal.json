@@ -3,7 +3,7 @@
   "trace_id": "trc_test-signal",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
-  "created_at": "2026-04-19T04:41:51Z",
+  "created_at": "2026-04-19T06:02:03Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
@@ -17,7 +17,7 @@
   "payload": {
     "signal_id": "sig_test-signal",
     "type": "signal",
-    "title": "Test Signal 22",
+    "title": "Test Signal 23",
     "summary": "Testing ingestion pipeline",
     "priority": "low",
     "content_path": "processed/signals/test-signal.json"
