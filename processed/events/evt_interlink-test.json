@@ -3,7 +3,7 @@
   "trace_id": "trc_interlink-test",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
-  "created_at": "2026-04-19T04:21:23Z",
+  "created_at": "2026-04-19T04:41:51Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
