@@ -43,26 +43,24 @@ jobs:
               \"client_payload\": {
                 \"trace_id\": \"$TRACE\",
                 \"repo\": \"${GITHUB_REPOSITORY}\",
-                \"workflow\": \"engine\",
+                \"workflow\": \"engine-runner\",
                 \"status\": \"started\"
               }
             }"
 
-      - name: Ensure output directories
+      - name: Ensure normalized output directory
         run: |
-          mkdir -p outputs/avot-core
-          mkdir -p outputs/archivist
-          mkdir -p outputs/control-center
+          mkdir -p outputs/signals-normalized
 
       - name: Pull latest changes
         run: |
           git pull origin main --rebase || echo "No remote changes"
 
-      - name: Process signals
+      - name: Normalize signals and handoff
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          echo "=== ENGINE START ==="
+          echo "=== ENGINE NORMALIZATION START ==="
           shopt -s nullglob
 
           for file in processed/signals/*; do
@@ -84,32 +82,27 @@ jobs:
               TRACE="trc_${base}"
             fi
 
-            ROUTE="Codex-control-center"
-            FS_DEST="control-center"
+            NORMALIZED_FILE="outputs/signals-normalized/${base}.json"
 
-            if [ "$TYPE" = "signal" ]; then
-              ROUTE="AVOT-engine-core-"
-              FS_DEST="avot-core"
-            elif [ "$TYPE" = "archival" ]; then
-              ROUTE="AVOT-ARCHIVIST"
-              FS_DEST="archivist"
-            fi
+            jq -n \
+              --arg trace_id "$TRACE" \
+              --arg type "$TYPE" \
+              --arg priority "$PRIORITY" \
+              --arg source_repo "${GITHUB_REPOSITORY}" \
+              --arg source_file "$filename" \
+              '{
+                trace_id: $trace_id,
+                type: $type,
+                priority: $priority,
+                source: {
+                  repo: $source_repo,
+                  file: $source_file
+                }
+              }' > "$NORMALIZED_FILE"
 
-            mkdir -p "outputs/${FS_DEST}"
-            OUTPUT_FILE="outputs/${FS_DEST}/${base}.md"
+            echo "Normalized $filename → $NORMALIZED_FILE"
 
-            echo "Routing $base -> $ROUTE (trace: $TRACE)"
-
-            {
-              echo "# AVOT Execution Output"
-              echo ""
-              echo "**Trace:** $TRACE"
-              echo "**Source File:** $filename"
-              echo "**Route:** $ROUTE"
-              echo "**Type:** $TYPE"
-              echo "**Priority:** $PRIORITY"
-            } > "$OUTPUT_FILE"
-
+            # 🔥 TRACE: normalized
             curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
@@ -118,74 +111,36 @@ jobs:
                 \"client_payload\": {
                   \"trace_id\": \"$TRACE\",
                   \"repo\": \"${GITHUB_REPOSITORY}\",
-                  \"workflow\": \"engine\",
-                  \"status\": \"routed:$ROUTE\"
+                  \"workflow\": \"engine-runner\",
+                  \"status\": \"normalized\"
                 }
               }"
-          done
 
-      - name: Checkout Control Center
-        uses: actions/checkout@v4
-        with:
-          repository: sovereign-codex/Codex-control-center
-          token: ${{ steps.app-token.outputs.token }}
-          path: control-center
-
-      - name: Write decisions
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          mkdir -p control-center/queue/decisions
-
-          shopt -s nullglob
-
-          for file in processed/signals/*; do
-            [ -f "$file" ] || continue
-
-            case "$file" in
-              *.json|*.JSON) ;;
-              *) continue ;;
-            esac
-
-            filename=$(basename "$file")
-            base="${filename%.*}"
-
-            TYPE=$(jq -r '.type // "unknown"' "$file")
-
-            TRACE=$(jq -r '.trace_id // empty' "$file")
-            if [ -z "$TRACE" ]; then
-              TRACE="trc_${base}"
-            fi
-
-            ROUTE="Codex-control-center"
-
-            if [ "$TYPE" = "signal" ]; then
-              ROUTE="AVOT-engine-core-"
-            elif [ "$TYPE" = "archival" ]; then
-              ROUTE="AVOT-ARCHIVIST"
-            fi
-
-            safe_name=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
-            decision_file="control-center/queue/decisions/${safe_name}.json"
-
-            jq -n \
-              --arg trace_id "$TRACE" \
-              --arg route "$ROUTE" \
-              --arg source_repo "${GITHUB_REPOSITORY}" \
-              --arg source_file "$filename" \
-              '{
-                trace_id: $trace_id,
-                decision: {
-                  route: $route
-                },
-                source: {
-                  repo: $source_repo,
-                  file: $source_file
+            # 🚀 HANDOFF TO CONTROL CENTER (NO ROUTING DECISION)
+            RESPONSE=$(curl -s -o response.txt -w "%{http_code}" -X POST \
+              https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -d "{
+                \"event_type\": \"engine_signal\",
+                \"client_payload\": {
+                  \"trace_id\": \"$TRACE\",
+                  \"type\": \"$TYPE\",
+                  \"priority\": \"$PRIORITY\",
+                  \"source_repo\": \"${GITHUB_REPOSITORY}\",
+                  \"file\": \"$filename\"
                 }
-              }' > "$decision_file"
+              }")
 
-            echo "Wrote $decision_file"
+            echo "Dispatch response: $RESPONSE"
+            cat response.txt || true
 
+            STATUS="handoff_sent"
+            if [ "$RESPONSE" != "204" ]; then
+              STATUS="handoff_failed"
+            fi
+
+            # 🔥 TRACE: handoff result
             curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
@@ -193,71 +148,21 @@ jobs:
                 \"event_type\": \"trace_log\",
                 \"client_payload\": {
                   \"trace_id\": \"$TRACE\",
-                  \"repo\": \"sovereign-codex/Codex-control-center\",
-                  \"workflow\": \"engine\",
-                  \"status\": \"decision_created\"
+                  \"repo\": \"${GITHUB_REPOSITORY}\",
+                  \"workflow\": \"engine-runner\",
+                  \"status\": \"$STATUS\"
                 }
               }"
+
           done
 
-      - name: Commit decisions
+      - name: Commit normalized outputs
         run: |
-          cd control-center
-
-          git config user.name "codex-app"
+          git config user.name "codex-engine"
           git config user.email "actions@github.com"
 
-          git pull origin main --rebase || echo "No remote changes"
-
-          git add queue/decisions/
-          git commit -m "Engine decisions" || echo "No changes"
+          git add outputs/signals-normalized/
+          git commit -m "Engine normalized signals" || echo "No changes"
 
           git pull origin main --rebase || echo "No remote changes"
-
-          git push origin main
-
-      - name: Trigger Dispatcher
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          RESPONSE=$(curl -s -o response.txt -w "%{http_code}" -X POST \
-            https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -d '{
-              "event_type": "engine_handoff"
-            }')
-
-          echo "HTTP Status: $RESPONSE"
-          cat response.txt || true
-
-      - name: Emit trace (dispatcher triggered)
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          TRACE="engine_${GITHUB_RUN_ID}"
-
-          curl -s -X POST https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -d "{
-              \"event_type\": \"trace_log\",
-              \"client_payload\": {
-                \"trace_id\": \"$TRACE\",
-                \"repo\": \"sovereign-codex/Codex-control-center\",
-                \"workflow\": \"engine\",
-                \"status\": \"dispatcher_triggered\"
-              }
-            }"
-
-      - name: Commit local outputs
-        run: |
-          git config user.name "codex-bot"
-          git config user.email "actions@github.com"
-
-          git add outputs/
-          git commit -m "Engine run" || echo "No changes"
-
-          git pull origin main --rebase || echo "No remote changes"
-
           git push origin main
