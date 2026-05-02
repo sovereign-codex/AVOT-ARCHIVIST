@@ -1,7 +1,7 @@
 {
   "trace_id": "trc_test-signal",
   "type": "signal",
-  "priority": "low",
+  "priority": "high",
   "source": {
     "repo": "sovereign-codex/AVOT-ARCHIVIST",
     "file": "test-signal.json"
