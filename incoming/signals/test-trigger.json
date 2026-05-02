@@ -2,5 +2,5 @@
   "type": "research",
   "title": "Engine Trigger Validation 777",
   "summary": "Testing workflow_run chain from Archivist → Engine",
-  "priority": "medium"
+  "priority": "low"
 }
