@@ -1,6 +1,6 @@
 {
   "type": "signal",
-  "title": "Test Signal OG123",
+  "title": "Test Signal OG 123",
   "summary": "Testing ingestion pipeline",
   "priority": "high"
 }
