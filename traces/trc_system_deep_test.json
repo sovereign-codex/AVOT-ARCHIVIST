@@ -1,0 +1,12 @@
+{
+  "trace_id": "trc_system_deep_test",
+  "events": [
+    {
+      "trace_id": "trc_system_deep_test",
+      "workflow": "engine-runner",
+      "repo": "sovereign-codex/AVOT-ARCHIVIST",
+      "status": "started",
+      "timestamp": "2026-05-03T08:45:00Z"
+    }
+  ]
+}
