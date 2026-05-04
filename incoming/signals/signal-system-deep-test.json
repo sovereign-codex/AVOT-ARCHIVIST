@@ -8,6 +8,6 @@
   "source": "manual-system-test",
   "payload": {
     "intent": "full_pipeline_validation",
-    "notes": "Testing ingestion v2 → validation → storage → graph → UI loop"
+    "notes": "Testing ingestion v3 → validation → storage → graph → UI loop"
   }
 }
