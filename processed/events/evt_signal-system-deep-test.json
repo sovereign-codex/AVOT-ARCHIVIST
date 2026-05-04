@@ -1,13 +1,13 @@
 {
-  "event_id": "evt_test-signal",
-  "trace_id": "trc_test-signal",
+  "event_id": "evt_signal-system-deep-test",
+  "trace_id": "trc_signal-system-deep-test",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
   "created_at": "2026-05-04T03:49:15Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
-    "path": "processed/signals/test-signal.json"
+    "path": "processed/signals/signal-system-deep-test.json"
   },
   "routing": {
     "target_repo": "AVOT-engine-core",
@@ -15,12 +15,12 @@
     "target_avot": "AVOT-Core"
   },
   "payload": {
-    "signal_id": "sig_test-signal",
+    "signal_id": "sig_signal-system-deep-test",
     "type": "signal",
-    "title": "Test Signal 123",
-    "summary": "Testing ingestion pipeline",
-    "priority": "high",
-    "content_path": "processed/signals/test-signal.json"
+    "title": "Untitled Signal",
+    "summary": "",
+    "priority": "low",
+    "content_path": "processed/signals/signal-system-deep-test.json"
   },
   "governance": {
     "value_profile": "default",
