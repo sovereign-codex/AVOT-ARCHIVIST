@@ -81,19 +81,19 @@ jobs:
             STATUS=$(jq -r '.status // "unknown"' "$file")
             TIMESTAMP=$(jq -r '.timestamp // empty' "$file")
 
-            # TIMESTAMP FIX (critical)
+            # TIMESTAMP FIX
             if [ -z "$TIMESTAMP" ] || [ "$TIMESTAMP" = "null" ]; then
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
               echo "⚠️ Missing timestamp → using system time"
             fi
 
-            # HARD VALIDATION GATE
+            # HARD VALIDATION
             if [ -z "$TRACE_ID" ] || [ -z "$WORKFLOW" ] || [ -z "$REPO" ]; then
               echo "❌ Invalid event → skipping $file"
               continue
             fi
 
-            # Normalize
+            # Normalize event
             jq -n \
               --arg trace_id "$TRACE_ID" \
               --arg workflow "$WORKFLOW" \
@@ -124,7 +124,7 @@ jobs:
             TRACE_ID=$(jq -r '.trace_id' "$file")
             TRACE_FILE="traces/${TRACE_ID}.json"
 
-            # Initialize if needed
+            # Initialize if missing
             if [ ! -f "$TRACE_FILE" ]; then
               echo "{\"trace_id\":\"$TRACE_ID\",\"events\":[]}" > "$TRACE_FILE"
             fi
@@ -137,7 +137,7 @@ jobs:
           done
 
       # -----------------------------
-      # 4. DISPATCH (VIA DISPATCHER)
+      # 4. DISPATCH (FIXED)
       # -----------------------------
       - name: Dispatch events via Cross Repo Dispatcher
         if: steps.files.outputs.has_files == 'true'
@@ -149,18 +149,25 @@ jobs:
 
             PAYLOAD=$(jq -c . "$file")
 
+            BODY=$(jq -n \
+              --argjson event "$PAYLOAD" \
+              '{
+                event_type: "route-event",
+                client_payload: {
+                  target: "control-center",
+                  source: "archivist",
+                  event: $event
+                }
+              }')
+
+            echo "Dispatch body:"
+            echo "$BODY"
+
             RESPONSE=$(curl -s -o response.txt -w "%{http_code}" \
               -X POST https://api.github.com/repos/sovereign-codex/Cross-Repo-Dispatcher/dispatches \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -d "{
-                \"event_type\": \"route-event\",
-                \"client_payload\": {
-                  \"target\": \"control-center\",
-                  \"source\": \"archivist",
-                  \"event\": $PAYLOAD
-                }
-              }")
+              -d "$BODY")
 
             echo "HTTP Status: $RESPONSE"
             echo "Response:"
