@@ -15,7 +15,7 @@ jobs:
 
     steps:
       # -----------------------------
-      # 0. CHECKOUT (FIXED)
+      # 0. CHECKOUT (FULL HISTORY)
       # -----------------------------
       - name: Checkout repo (FULL)
         uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
 
       # -----------------------------
-      # DEBUG (CRITICAL VISIBILITY)
+      # DEBUG VISIBILITY
       # -----------------------------
       - name: Debug repo state
         run: |
@@ -37,7 +37,7 @@ jobs:
           ls -la incoming || echo "incoming missing"
 
       # -----------------------------
-      # 1. DISCOVER FILES (SMART)
+      # 1. DETECT FILES (SMART)
       # -----------------------------
       - name: Detect changed incoming files
         id: files
@@ -46,7 +46,7 @@ jobs:
 
           FILES=$(git diff --name-only HEAD~1 HEAD | grep '^incoming/.*\.json$' || true)
 
-          # fallback (important)
+          # fallback safety
           if [ -z "$FILES" ]; then
             echo "No git-detected changes, fallback scan..."
             FILES=$(ls incoming/*.json 2>/dev/null || true)
@@ -81,18 +81,19 @@ jobs:
             STATUS=$(jq -r '.status // "unknown"' "$file")
             TIMESTAMP=$(jq -r '.timestamp // empty' "$file")
 
-            # TIMESTAMP FIX (CRITICAL)
+            # TIMESTAMP FIX (critical)
             if [ -z "$TIMESTAMP" ] || [ "$TIMESTAMP" = "null" ]; then
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
               echo "⚠️ Missing timestamp → using system time"
             fi
 
-            # VALIDATION (HARD GATE)
+            # HARD VALIDATION GATE
             if [ -z "$TRACE_ID" ] || [ -z "$WORKFLOW" ] || [ -z "$REPO" ]; then
               echo "❌ Invalid event → skipping $file"
               continue
             fi
 
+            # Normalize
             jq -n \
               --arg trace_id "$TRACE_ID" \
               --arg workflow "$WORKFLOW" \
@@ -110,7 +111,7 @@ jobs:
           done
 
       # -----------------------------
-      # 3. TRACE STORAGE (SAFE)
+      # 3. TRACE STORAGE
       # -----------------------------
       - name: Update trace storage
         if: steps.files.outputs.has_files == 'true'
@@ -123,12 +124,12 @@ jobs:
             TRACE_ID=$(jq -r '.trace_id' "$file")
             TRACE_FILE="traces/${TRACE_ID}.json"
 
-            # INIT IF NEEDED
+            # Initialize if needed
             if [ ! -f "$TRACE_FILE" ]; then
               echo "{\"trace_id\":\"$TRACE_ID\",\"events\":[]}" > "$TRACE_FILE"
             fi
 
-            # APPEND EVENT SAFELY
+            # Append safely
             jq --slurpfile new "$file" \
               '.events += $new' \
               "$TRACE_FILE" > tmp.json && mv tmp.json "$TRACE_FILE"
@@ -136,24 +137,29 @@ jobs:
           done
 
       # -----------------------------
-      # 4. DISPATCH (FIXED + DEBUG)
+      # 4. DISPATCH (VIA DISPATCHER)
       # -----------------------------
-      - name: Dispatch events to Control Center
+      - name: Dispatch events via Cross Repo Dispatcher
         if: steps.files.outputs.has_files == 'true'
         run: |
           for file in processed/*.json; do
             [ -f "$file" ] || continue
 
-            echo "🚀 Dispatching $(basename $file)"
-            cat "$file"
+            echo "🚀 Routing via dispatcher: $(basename $file)"
+
+            PAYLOAD=$(jq -c . "$file")
 
             RESPONSE=$(curl -s -o response.txt -w "%{http_code}" \
-              -X POST https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
+              -X POST https://api.github.com/repos/sovereign-codex/Cross-Repo-Dispatcher/dispatches \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -d "{
-                \"event_type\": \"trace-event\",
-                \"client_payload\": $(cat $file)
+                \"event_type\": \"route-event\",
+                \"client_payload\": {
+                  \"target\": \"control-center\",
+                  \"source\": \"archivist",
+                  \"event\": $PAYLOAD
+                }
               }")
 
             echo "HTTP Status: $RESPONSE"
@@ -162,7 +168,7 @@ jobs:
           done
 
       # -----------------------------
-      # 5. COMMIT (SAFE PUSH)
+      # 5. COMMIT (SAFE)
       # -----------------------------
       - name: Commit changes
         if: steps.files.outputs.has_files == 'true'
