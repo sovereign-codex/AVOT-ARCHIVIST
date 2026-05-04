@@ -1,0 +1,13 @@
+{
+  "trace_id": "trc_system_deep_test",
+  "timestamp": "2026-05-03T08:45:00Z",
+  "repo": "sovereign-codex/AVOT-ARCHIVIST",
+  "workflow": "engine-runner",
+  "status": "started",
+  "event_type": "trace_event",
+  "source": "manual-system-test",
+  "payload": {
+    "intent": "full_pipeline_validation",
+    "notes": "Testing ingestion → validation → storage → graph → UI loop"
+  }
+}
