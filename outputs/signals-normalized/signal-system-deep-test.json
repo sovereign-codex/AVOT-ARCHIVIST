@@ -1,0 +1,9 @@
+{
+  "trace_id": "trc_system_deep_test",
+  "type": "unknown",
+  "priority": "low",
+  "source": {
+    "repo": "sovereign-codex/AVOT-ARCHIVIST",
+    "file": "signal-system-deep-test.json"
+  }
+}
