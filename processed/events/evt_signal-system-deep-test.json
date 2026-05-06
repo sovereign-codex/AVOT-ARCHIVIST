@@ -3,7 +3,7 @@
   "trace_id": "trc_signal-system-deep-test",
   "event_type": "signal.ingested",
   "schema_version": "1.0",
-  "created_at": "2026-05-04T14:22:12Z",
+  "created_at": "2026-05-06T05:02:41Z",
   "source": {
     "repo": "AVOT-ARCHIVIST",
     "workflow": "Archivist Emit Event",
