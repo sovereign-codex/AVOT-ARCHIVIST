@@ -23,6 +23,17 @@ jobs:
           fetch-depth: 0
 
       # -----------------------------
+      # 1. CREATE GITHUB APP TOKEN
+      # -----------------------------
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: sovereign-codex
+
+      # -----------------------------
       # DEBUG VISIBILITY
       # -----------------------------
       - name: Debug repo state
@@ -37,7 +48,7 @@ jobs:
           ls -la incoming || echo "incoming missing"
 
       # -----------------------------
-      # 1. DETECT FILES (SMART)
+      # 2. DETECT FILES (SMART)
       # -----------------------------
       - name: Detect changed incoming files
         id: files
@@ -65,7 +76,7 @@ jobs:
           fi
 
       # -----------------------------
-      # 2. VALIDATE + NORMALIZE
+      # 3. VALIDATE + NORMALIZE
       # -----------------------------
       - name: Validate + Normalize events
         if: steps.files.outputs.has_files == 'true'
@@ -106,12 +117,12 @@ jobs:
                 repo: $repo,
                 status: $status,
                 timestamp: $timestamp
-              }' > "processed/$(basename $file)"
+              }' > "processed/$(basename "$file")"
 
           done
 
       # -----------------------------
-      # 3. TRACE STORAGE
+      # 4. TRACE STORAGE
       # -----------------------------
       - name: Update trace storage
         if: steps.files.outputs.has_files == 'true'
@@ -137,15 +148,17 @@ jobs:
           done
 
       # -----------------------------
-      # 4. DISPATCH (FIXED)
+      # 5. DISPATCH (FULLY FIXED)
       # -----------------------------
       - name: Dispatch events via Cross Repo Dispatcher
         if: steps.files.outputs.has_files == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           for file in processed/*.json; do
             [ -f "$file" ] || continue
 
-            echo "🚀 Routing via dispatcher: $(basename $file)"
+            echo "🚀 Routing via dispatcher: $(basename "$file")"
 
             PAYLOAD=$(jq -c . "$file")
 
@@ -164,9 +177,11 @@ jobs:
             echo "$BODY"
 
             RESPONSE=$(curl -s -o response.txt -w "%{http_code}" \
-              -X POST https://api.github.com/repos/sovereign-codex/Cross-Repo-Dispatcher/dispatches \
+              -X POST \
+              https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
               -d "$BODY")
 
             echo "HTTP Status: $RESPONSE"
@@ -175,7 +190,7 @@ jobs:
           done
 
       # -----------------------------
-      # 5. COMMIT (SAFE)
+      # 6. COMMIT (SAFE)
       # -----------------------------
       - name: Commit changes
         if: steps.files.outputs.has_files == 'true'
