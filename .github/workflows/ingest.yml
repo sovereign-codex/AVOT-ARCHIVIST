@@ -14,28 +14,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # -----------------------------
+
+      # -------------------------------------------------
       # 0. CHECKOUT (FULL HISTORY)
-      # -----------------------------
+      # -------------------------------------------------
       - name: Checkout repo (FULL)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # -----------------------------
-      # 1. CREATE GITHUB APP TOKEN
-      # -----------------------------
+      # -------------------------------------------------
+      # 1. GENERATE GITHUB APP TOKEN
+      # -------------------------------------------------
       - name: Generate GitHub App Token
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.CODEX_APP_ID }}
+          private-key: ${{ secrets.CODEX_APP_PRIVATE_KEY }}
           owner: sovereign-codex
 
-      # -----------------------------
+      # -------------------------------------------------
       # DEBUG VISIBILITY
-      # -----------------------------
+      # -------------------------------------------------
       - name: Debug repo state
         run: |
           echo "==== CURRENT COMMIT ===="
@@ -47,9 +48,9 @@ jobs:
           echo "==== INCOMING DIR ===="
           ls -la incoming || echo "incoming missing"
 
-      # -----------------------------
-      # 2. DETECT FILES (SMART)
-      # -----------------------------
+      # -------------------------------------------------
+      # 2. DETECT CHANGED FILES
+      # -------------------------------------------------
       - name: Detect changed incoming files
         id: files
         run: |
@@ -70,20 +71,24 @@ jobs:
             echo "has_files=false" >> $GITHUB_OUTPUT
           else
             echo "has_files=true" >> $GITHUB_OUTPUT
+
             echo "files<<EOF" >> $GITHUB_OUTPUT
             echo "$FILES" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           fi
 
-      # -----------------------------
-      # 3. VALIDATE + NORMALIZE
-      # -----------------------------
+      # -------------------------------------------------
+      # 3. VALIDATE + NORMALIZE EVENTS
+      # -------------------------------------------------
       - name: Validate + Normalize events
         if: steps.files.outputs.has_files == 'true'
         run: |
           mkdir -p processed
 
           for file in ${{ steps.files.outputs.files }}; do
+
+            [ -f "$file" ] || continue
+
             echo "---- Processing $file ----"
 
             TRACE_ID=$(jq -r '.trace_id // empty' "$file")
@@ -92,19 +97,19 @@ jobs:
             STATUS=$(jq -r '.status // "unknown"' "$file")
             TIMESTAMP=$(jq -r '.timestamp // empty' "$file")
 
-            # TIMESTAMP FIX
+            # timestamp fallback
             if [ -z "$TIMESTAMP" ] || [ "$TIMESTAMP" = "null" ]; then
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
               echo "⚠️ Missing timestamp → using system time"
             fi
 
-            # HARD VALIDATION
+            # hard validation
             if [ -z "$TRACE_ID" ] || [ -z "$WORKFLOW" ] || [ -z "$REPO" ]; then
               echo "❌ Invalid event → skipping $file"
               continue
             fi
 
-            # Normalize event
+            # normalize
             jq -n \
               --arg trace_id "$TRACE_ID" \
               --arg workflow "$WORKFLOW" \
@@ -121,41 +126,47 @@ jobs:
 
           done
 
-      # -----------------------------
+      # -------------------------------------------------
       # 4. TRACE STORAGE
-      # -----------------------------
+      # -------------------------------------------------
       - name: Update trace storage
         if: steps.files.outputs.has_files == 'true'
         run: |
           mkdir -p traces
 
           for file in processed/*.json; do
+
             [ -f "$file" ] || continue
 
             TRACE_ID=$(jq -r '.trace_id' "$file")
             TRACE_FILE="traces/${TRACE_ID}.json"
 
-            # Initialize if missing
+            echo "Updating trace: $TRACE_ID"
+
+            # initialize if missing
             if [ ! -f "$TRACE_FILE" ]; then
               echo "{\"trace_id\":\"$TRACE_ID\",\"events\":[]}" > "$TRACE_FILE"
             fi
 
-            # Append safely
+            # append safely
             jq --slurpfile new "$file" \
               '.events += $new' \
-              "$TRACE_FILE" > tmp.json && mv tmp.json "$TRACE_FILE"
+              "$TRACE_FILE" > tmp.json
+
+            mv tmp.json "$TRACE_FILE"
 
           done
 
-      # -----------------------------
-      # 5. DISPATCH (FULLY FIXED)
-      # -----------------------------
+      # -------------------------------------------------
+      # 5. DISPATCH TO CONTROL CENTER
+      # -------------------------------------------------
       - name: Dispatch events via Cross Repo Dispatcher
         if: steps.files.outputs.has_files == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           for file in processed/*.json; do
+
             [ -f "$file" ] || continue
 
             echo "🚀 Routing via dispatcher: $(basename "$file")"
@@ -176,7 +187,9 @@ jobs:
             echo "Dispatch body:"
             echo "$BODY"
 
-            RESPONSE=$(curl -s -o response.txt -w "%{http_code}" \
+            RESPONSE=$(curl -s \
+              -o response.txt \
+              -w "%{http_code}" \
               -X POST \
               https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
               -H "Accept: application/vnd.github+json" \
@@ -185,13 +198,15 @@ jobs:
               -d "$BODY")
 
             echo "HTTP Status: $RESPONSE"
+
             echo "Response:"
             cat response.txt
+
           done
 
-      # -----------------------------
-      # 6. COMMIT (SAFE)
-      # -----------------------------
+      # -------------------------------------------------
+      # 6. COMMIT CHANGES
+      # -------------------------------------------------
       - name: Commit changes
         if: steps.files.outputs.has_files == 'true'
         run: |
@@ -203,4 +218,5 @@ jobs:
           git commit -m "Archivist ingest: normalized, stored, dispatched" || echo "No changes"
 
           git pull --rebase origin main || true
+
           git push
