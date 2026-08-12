@@ -1,0 +1,43 @@
+{
+  "trace_id": "META-CIRCULATION-003",
+  "timestamp": "2026-08-12T04:44:00Z",
+  "repo": "sovereign-codex/AVOT-ARCHIVIST",
+  "workflow": "archivist-ingest",
+  "status": "capability_probe",
+  "event_class": "institutional_event",
+  "protocol_version": "meta-circulation/0.3",
+  "semantic": {
+    "institutional_state": "capability_gain_candidate",
+    "execution_state": "bounded_revision_committed",
+    "flow_state": "ingest_probe",
+    "authority_state": "authorized_by_accountable_human",
+    "next_valid_action": "observe_and_compare",
+    "source_role": "Bootstrap Coordinator",
+    "receiving_office": "Office Incoming Inventory",
+    "review_role": "Promotion Reviewer",
+    "review_requirement": "deferred_to_daily_cycle",
+    "handoff_semantics": {
+      "next_agent_required": false,
+      "rediscovery_required": false,
+      "return_basis": "semantic_membrane_revision",
+      "continuity_worthy": true
+    }
+  },
+  "evidence": {
+    "source_commission": "META-CIRCULATION-002",
+    "terminal_result": "semantic_preservation_probe",
+    "observations": [
+      "legacy five-field transport contract remains required",
+      "approved semantic vocabulary should survive normalization",
+      "unknown payload fields should not become canon automatically",
+      "duplicate normalized events should not multiply trace history"
+    ],
+    "test_questions": [
+      "Does Archivist preserve allowlisted semantic fields?",
+      "Does the legacy transport contract remain intact?",
+      "Does TRACE receive the richer canonical event?",
+      "Does repeated ingest remain idempotent?"
+    ]
+  },
+  "experimental_unadmitted_field": "This field should not survive canonical normalization."
+}
