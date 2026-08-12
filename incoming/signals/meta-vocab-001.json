@@ -1,0 +1,39 @@
+{
+  "trace_id": "meta_vocab_001",
+  "timestamp": "2026-08-12T02:45:00Z",
+  "repo": "sovereign-codex/AVOT-ARCHIVIST",
+  "workflow": "office-vocabulary-evolution",
+  "status": "experimental",
+
+  "event_type": "institutional_meta_observation",
+  "source": "trailhead-1",
+
+  "packet_type": "meta_observation",
+  "vocabulary_version": "0.1-experimental",
+
+  "institutional_state": "close_or_observe",
+  "execution_state": "merged_verified",
+  "flow_state": "terminal_transition_consumed",
+  "next_valid_action": "observe_graph_propagation",
+
+  "source_role": "AVOT-Fabricator",
+  "receiving_office": "Bootstrap Coordinator",
+  "review_role": "Promotion Reviewer",
+  "review_requirement": "conditional",
+
+  "handoff_semantics": {
+    "next_agent_required": false,
+    "return_basis": "resulting_state_readiness",
+    "rediscovery_required": false
+  },
+
+  "payload": {
+    "intent": "test_expanding_institutional_vocabulary_through_existing_archivist_path",
+    "observations": [
+      "execution_returns_to_readiness",
+      "promotion_review_is_conditional",
+      "completed_transitions_should_not_require_scheduled_rediscovery",
+      "machine_readable_handoff_vocabulary_may_preserve_legacy_pipeline_assumptions"
+    ]
+  }
+}
