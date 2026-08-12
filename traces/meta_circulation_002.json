@@ -1,0 +1,12 @@
+{
+  "trace_id": "meta_circulation_002",
+  "events": [
+    {
+      "trace_id": "meta_circulation_002",
+      "workflow": "institutional-event-circulation",
+      "repo": "sovereign-codex/AVOT-ARCHIVIST",
+      "status": "experimental",
+      "timestamp": "2026-08-12T03:29:11Z"
+    }
+  ]
+}
