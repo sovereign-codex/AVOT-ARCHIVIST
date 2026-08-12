@@ -14,18 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # -------------------------------------------------
-      # 0. CHECKOUT (FULL HISTORY)
-      # -------------------------------------------------
       - name: Checkout repo (FULL)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # -------------------------------------------------
-      # 1. GENERATE GITHUB APP TOKEN
-      # -------------------------------------------------
       - name: Generate GitHub App Token
         id: app-token
         uses: actions/create-github-app-token@v1
@@ -34,52 +27,29 @@ jobs:
           private-key: ${{ secrets.CODEX_APP_PRIVATE_KEY }}
           owner: sovereign-codex
 
-      # -------------------------------------------------
-      # DEBUG VISIBILITY
-      # -------------------------------------------------
       - name: Debug repo state
         run: |
-          echo "==== CURRENT COMMIT ===="
           git rev-parse HEAD
-
-          echo "==== LAST COMMIT FILES ===="
           git show --name-only --pretty=""
-
-          echo "==== INCOMING DIR ===="
           ls -la incoming || echo "incoming missing"
 
-      # -------------------------------------------------
-      # 2. DETECT CHANGED FILES
-      # -------------------------------------------------
       - name: Detect changed incoming files
         id: files
         run: |
-          echo "Detecting changed files..."
-
           FILES=$(git diff --name-only HEAD~1 HEAD | grep '^incoming/.*\.json$' || true)
-
-          # fallback safety: recursive so manual dispatch can see nested intake
           if [ -z "$FILES" ]; then
-            echo "No git-detected changes, fallback recursive scan..."
             FILES=$(find incoming -type f \( -name '*.json' -o -name '*.JSON' \) -print 2>/dev/null || true)
           fi
-
-          echo "Detected files:"
-          echo "$FILES"
 
           if [ -z "$FILES" ]; then
             echo "has_files=false" >> $GITHUB_OUTPUT
           else
             echo "has_files=true" >> $GITHUB_OUTPUT
-
             echo "files<<EOF" >> $GITHUB_OUTPUT
             echo "$FILES" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           fi
 
-      # -------------------------------------------------
-      # 3. VALIDATE + NORMALIZE EVENTS
-      # -------------------------------------------------
       - name: Validate + Normalize events
         if: steps.files.outputs.has_files == 'true'
         run: |
@@ -88,29 +58,20 @@ jobs:
           : > "$MANIFEST"
 
           for file in ${{ steps.files.outputs.files }}; do
-
             [ -f "$file" ] || continue
 
-            echo "---- Processing $file ----"
-
-            # Legacy transport fields remain canonical and backward compatible.
-            # The transport envelope is accepted as a fallback for newer packets.
             TRACE_ID=$(jq -r '.trace_id // .transport.trace_id // empty' "$file")
             WORKFLOW=$(jq -r '.workflow // .transport.workflow // empty' "$file")
             REPO=$(jq -r '.repo // .transport.repo // empty' "$file")
             STATUS=$(jq -r '.status // .transport.status // "unknown"' "$file")
             TIMESTAMP=$(jq -r '.timestamp // .transport.timestamp // empty' "$file")
-
             EVENT_CLASS=$(jq -r '.event_class // empty' "$file")
             PROTOCOL_VERSION=$(jq -r '.protocol_version // empty' "$file")
 
-            # timestamp fallback
             if [ -z "$TIMESTAMP" ] || [ "$TIMESTAMP" = "null" ]; then
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              echo "Missing timestamp -> using system time"
             fi
 
-            # hard validation
             if [ -z "$TRACE_ID" ] || [ -z "$WORKFLOW" ] || [ -z "$REPO" ]; then
               echo "Invalid event -> skipping $file"
               continue
@@ -118,9 +79,6 @@ jobs:
 
             OUTPUT="processed/$(basename "$file")"
 
-            # Governed semantic admission. Unknown top-level payload fields are
-            # intentionally not promoted. Only the approved experimental vocabulary
-            # below enters canonical institutional memory.
             jq \
               --arg trace_id "$TRACE_ID" \
               --arg workflow "$WORKFLOW" \
@@ -129,15 +87,10 @@ jobs:
               --arg timestamp "$TIMESTAMP" \
               --arg event_class "$EVENT_CLASS" \
               --arg protocol_version "$PROTOCOL_VERSION" \
-              '{
-                trace_id: $trace_id,
-                workflow: $workflow,
-                repo: $repo,
-                status: $status,
-                timestamp: $timestamp
-              }
-              + (if $event_class != "" then {event_class: $event_class} else {} end)
-              + (if $protocol_version != "" then {protocol_version: $protocol_version} else {} end)
+              --arg source_file "$file" \
+              '{trace_id:$trace_id,workflow:$workflow,repo:$repo,status:$status,timestamp:$timestamp}
+              + (if $event_class != "" then {event_class:$event_class} else {} end)
+              + (if $protocol_version != "" then {protocol_version:$protocol_version} else {} end)
               + (if (.semantic? | type) == "object" then {
                   semantic: ({
                     institutional_state: .semantic.institutional_state,
@@ -166,58 +119,31 @@ jobs:
                   } | with_entries(select(.value != null)))
                 } else {} end)
               + (if ($event_class != "" or $protocol_version != "" or (.semantic? | type) == "object") then {
-                  normalization: {
-                    membrane_version: "archivist.semantic.v0.1-experimental",
-                    admission_posture: "allowlisted",
-                    source_file: $ARGS.named.source_file
-                  }
-                } else {} end)' \
-              --arg source_file "$file" \
-              "$file" > "$OUTPUT"
+                  normalization:{membrane_version:"archivist.semantic.v0.1-experimental",admission_posture:"allowlisted",source_file:$source_file}
+                } else {} end)' "$file" > "$OUTPUT"
 
             echo "$OUTPUT" >> "$MANIFEST"
-            echo "Normalized -> $OUTPUT"
-
           done
 
-      # -------------------------------------------------
-      # 4. TRACE STORAGE
-      # -------------------------------------------------
-      - name: Update trace storage
+      - name: Update local trace storage
         if: steps.files.outputs.has_files == 'true'
         run: |
           mkdir -p traces
           MANIFEST=/tmp/archivist-processed-files.txt
-
           [ -f "$MANIFEST" ] || exit 0
 
           while IFS= read -r file; do
-
             [ -f "$file" ] || continue
-
             TRACE_ID=$(jq -r '.trace_id' "$file")
             TRACE_FILE="traces/${TRACE_ID}.json"
-
-            echo "Updating trace: $TRACE_ID"
-
             if [ ! -f "$TRACE_FILE" ]; then
               echo "{\"trace_id\":\"$TRACE_ID\",\"events\":[]}" > "$TRACE_FILE"
             fi
-
-            # Idempotency: do not append an event that is already present as the
-            # same normalized JSON object.
-            jq --slurpfile new "$file" \
-              'if any(.events[]?; . == $new[0]) then . else .events += $new end' \
-              "$TRACE_FILE" > tmp.json
-
+            jq --slurpfile new "$file" 'if any(.events[]?; . == $new[0]) then . else .events += $new end' "$TRACE_FILE" > tmp.json
             mv tmp.json "$TRACE_FILE"
-
           done < "$MANIFEST"
 
-      # -------------------------------------------------
-      # 5. DISPATCH TO CONTROL CENTER
-      # -------------------------------------------------
-      - name: Dispatch events via Cross Repo Dispatcher
+      - name: Dispatch canonical events
         if: steps.files.outputs.has_files == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -226,57 +152,40 @@ jobs:
           [ -f "$MANIFEST" ] || exit 0
 
           while IFS= read -r file; do
-
             [ -f "$file" ] || continue
-
-            echo "Routing via dispatcher: $(basename "$file")"
-
             PAYLOAD=$(jq -c . "$file")
 
-            BODY=$(jq -n \
-              --argjson event "$PAYLOAD" \
-              '{
-                event_type: "route-event",
-                client_payload: {
-                  target: "control-center",
-                  source: "archivist",
-                  event: $event
-                }
-              }')
-
-            RESPONSE=$(curl -s \
-              -o response.txt \
-              -w "%{http_code}" \
-              -X POST \
+            CONTROL_BODY=$(jq -n --argjson event "$PAYLOAD" '{event_type:"route-event",client_payload:{target:"control-center",source:"archivist",event:$event}}')
+            CONTROL_STATUS=$(curl -s -o control-response.txt -w "%{http_code}" -X POST \
               https://api.github.com/repos/sovereign-codex/Codex-control-center/dispatches \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              -d "$BODY")
+              -d "$CONTROL_BODY")
 
-            echo "HTTP Status: $RESPONSE"
-            cat response.txt || true
+            TRACE_BODY=$(jq -n --argjson event "$PAYLOAD" '{event_type:"institutional_event",client_payload:{source:"archivist",event:$event}}')
+            TRACE_STATUS=$(curl -s -o trace-response.txt -w "%{http_code}" -X POST \
+              https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              -d "$TRACE_BODY")
 
-            if [ "$RESPONSE" != "204" ]; then
-              echo "Dispatch failed for $file"
+            echo "Control Center HTTP: $CONTROL_STATUS"
+            echo "AVOT-TRACE HTTP: $TRACE_STATUS"
+
+            if [ "$CONTROL_STATUS" != "204" ] || [ "$TRACE_STATUS" != "204" ]; then
+              echo "Canonical dispatch failed for $file"
               exit 1
             fi
-
           done < "$MANIFEST"
 
-      # -------------------------------------------------
-      # 6. COMMIT CHANGES
-      # -------------------------------------------------
       - name: Commit changes
         if: steps.files.outputs.has_files == 'true'
         run: |
           git config user.name "codex-bot"
           git config user.email "actions@github.com"
-
           git add processed traces
-
           git commit -m "Archivist ingest: normalized, stored, dispatched" || echo "No changes"
-
           git pull --rebase origin main || true
-
           git push
