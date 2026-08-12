@@ -58,10 +58,10 @@ jobs:
 
           FILES=$(git diff --name-only HEAD~1 HEAD | grep '^incoming/.*\.json$' || true)
 
-          # fallback safety
+          # fallback safety: recursive so manual dispatch can see nested intake
           if [ -z "$FILES" ]; then
-            echo "No git-detected changes, fallback scan..."
-            FILES=$(ls incoming/*.json 2>/dev/null || true)
+            echo "No git-detected changes, fallback recursive scan..."
+            FILES=$(find incoming -type f \( -name '*.json' -o -name '*.JSON' \) -print 2>/dev/null || true)
           fi
 
           echo "Detected files:"
@@ -84,6 +84,8 @@ jobs:
         if: steps.files.outputs.has_files == 'true'
         run: |
           mkdir -p processed
+          MANIFEST=/tmp/archivist-processed-files.txt
+          : > "$MANIFEST"
 
           for file in ${{ steps.files.outputs.files }}; do
 
@@ -91,38 +93,90 @@ jobs:
 
             echo "---- Processing $file ----"
 
-            TRACE_ID=$(jq -r '.trace_id // empty' "$file")
-            WORKFLOW=$(jq -r '.workflow // empty' "$file")
-            REPO=$(jq -r '.repo // empty' "$file")
-            STATUS=$(jq -r '.status // "unknown"' "$file")
-            TIMESTAMP=$(jq -r '.timestamp // empty' "$file")
+            # Legacy transport fields remain canonical and backward compatible.
+            # The transport envelope is accepted as a fallback for newer packets.
+            TRACE_ID=$(jq -r '.trace_id // .transport.trace_id // empty' "$file")
+            WORKFLOW=$(jq -r '.workflow // .transport.workflow // empty' "$file")
+            REPO=$(jq -r '.repo // .transport.repo // empty' "$file")
+            STATUS=$(jq -r '.status // .transport.status // "unknown"' "$file")
+            TIMESTAMP=$(jq -r '.timestamp // .transport.timestamp // empty' "$file")
+
+            EVENT_CLASS=$(jq -r '.event_class // empty' "$file")
+            PROTOCOL_VERSION=$(jq -r '.protocol_version // empty' "$file")
 
             # timestamp fallback
             if [ -z "$TIMESTAMP" ] || [ "$TIMESTAMP" = "null" ]; then
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              echo "⚠️ Missing timestamp → using system time"
+              echo "Missing timestamp -> using system time"
             fi
 
             # hard validation
             if [ -z "$TRACE_ID" ] || [ -z "$WORKFLOW" ] || [ -z "$REPO" ]; then
-              echo "❌ Invalid event → skipping $file"
+              echo "Invalid event -> skipping $file"
               continue
             fi
 
-            # normalize
-            jq -n \
+            OUTPUT="processed/$(basename "$file")"
+
+            # Governed semantic admission. Unknown top-level payload fields are
+            # intentionally not promoted. Only the approved experimental vocabulary
+            # below enters canonical institutional memory.
+            jq \
               --arg trace_id "$TRACE_ID" \
               --arg workflow "$WORKFLOW" \
               --arg repo "$REPO" \
               --arg status "$STATUS" \
               --arg timestamp "$TIMESTAMP" \
+              --arg event_class "$EVENT_CLASS" \
+              --arg protocol_version "$PROTOCOL_VERSION" \
               '{
                 trace_id: $trace_id,
                 workflow: $workflow,
                 repo: $repo,
                 status: $status,
                 timestamp: $timestamp
-              }' > "processed/$(basename "$file")"
+              }
+              + (if $event_class != "" then {event_class: $event_class} else {} end)
+              + (if $protocol_version != "" then {protocol_version: $protocol_version} else {} end)
+              + (if (.semantic? | type) == "object" then {
+                  semantic: ({
+                    institutional_state: .semantic.institutional_state,
+                    execution_state: .semantic.execution_state,
+                    flow_state: .semantic.flow_state,
+                    authority_state: .semantic.authority_state,
+                    next_valid_action: .semantic.next_valid_action,
+                    source_role: .semantic.source_role,
+                    receiving_office: .semantic.receiving_office,
+                    review_role: .semantic.review_role,
+                    review_requirement: .semantic.review_requirement,
+                    handoff_semantics: (if (.semantic.handoff_semantics? | type) == "object" then ({
+                      next_agent_required: .semantic.handoff_semantics.next_agent_required,
+                      rediscovery_required: .semantic.handoff_semantics.rediscovery_required,
+                      return_basis: .semantic.handoff_semantics.return_basis,
+                      continuity_worthy: .semantic.handoff_semantics.continuity_worthy
+                    } | with_entries(select(.value != null))) else null end)
+                  } | with_entries(select(.value != null)))
+                } else {} end)
+              + (if (.evidence? | type) == "object" then {
+                  evidence: ({
+                    source_commission: .evidence.source_commission,
+                    terminal_result: .evidence.terminal_result,
+                    observations: (if (.evidence.observations? | type) == "array" then .evidence.observations else null end),
+                    test_questions: (if (.evidence.test_questions? | type) == "array" then .evidence.test_questions else null end)
+                  } | with_entries(select(.value != null)))
+                } else {} end)
+              + (if ($event_class != "" or $protocol_version != "" or (.semantic? | type) == "object") then {
+                  normalization: {
+                    membrane_version: "archivist.semantic.v0.1-experimental",
+                    admission_posture: "allowlisted",
+                    source_file: $ARGS.named.source_file
+                  }
+                } else {} end)' \
+              --arg source_file "$file" \
+              "$file" > "$OUTPUT"
+
+            echo "$OUTPUT" >> "$MANIFEST"
+            echo "Normalized -> $OUTPUT"
 
           done
 
@@ -133,8 +187,11 @@ jobs:
         if: steps.files.outputs.has_files == 'true'
         run: |
           mkdir -p traces
+          MANIFEST=/tmp/archivist-processed-files.txt
 
-          for file in processed/*.json; do
+          [ -f "$MANIFEST" ] || exit 0
+
+          while IFS= read -r file; do
 
             [ -f "$file" ] || continue
 
@@ -143,19 +200,19 @@ jobs:
 
             echo "Updating trace: $TRACE_ID"
 
-            # initialize if missing
             if [ ! -f "$TRACE_FILE" ]; then
               echo "{\"trace_id\":\"$TRACE_ID\",\"events\":[]}" > "$TRACE_FILE"
             fi
 
-            # append safely
+            # Idempotency: do not append an event that is already present as the
+            # same normalized JSON object.
             jq --slurpfile new "$file" \
-              '.events += $new' \
+              'if any(.events[]?; . == $new[0]) then . else .events += $new end' \
               "$TRACE_FILE" > tmp.json
 
             mv tmp.json "$TRACE_FILE"
 
-          done
+          done < "$MANIFEST"
 
       # -------------------------------------------------
       # 5. DISPATCH TO CONTROL CENTER
@@ -165,11 +222,14 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          for file in processed/*.json; do
+          MANIFEST=/tmp/archivist-processed-files.txt
+          [ -f "$MANIFEST" ] || exit 0
+
+          while IFS= read -r file; do
 
             [ -f "$file" ] || continue
 
-            echo "🚀 Routing via dispatcher: $(basename "$file")"
+            echo "Routing via dispatcher: $(basename "$file")"
 
             PAYLOAD=$(jq -c . "$file")
 
@@ -184,9 +244,6 @@ jobs:
                 }
               }')
 
-            echo "Dispatch body:"
-            echo "$BODY"
-
             RESPONSE=$(curl -s \
               -o response.txt \
               -w "%{http_code}" \
@@ -198,11 +255,14 @@ jobs:
               -d "$BODY")
 
             echo "HTTP Status: $RESPONSE"
+            cat response.txt || true
 
-            echo "Response:"
-            cat response.txt
+            if [ "$RESPONSE" != "204" ]; then
+              echo "Dispatch failed for $file"
+              exit 1
+            fi
 
-          done
+          done < "$MANIFEST"
 
       # -------------------------------------------------
       # 6. COMMIT CHANGES
