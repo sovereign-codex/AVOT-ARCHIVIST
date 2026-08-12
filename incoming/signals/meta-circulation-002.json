@@ -1,0 +1,56 @@
+{
+  "trace_id": "meta_circulation_002",
+  "timestamp": "2026-08-12T03:29:11Z",
+  "repo": "sovereign-codex/AVOT-ARCHIVIST",
+  "workflow": "institutional-event-circulation",
+  "status": "experimental",
+
+  "event_class": "institutional_event",
+  "protocol_version": "institutional-event-envelope.0.1-experimental",
+
+  "transport": {
+    "trace_id": "meta_circulation_002",
+    "timestamp": "2026-08-12T03:29:11Z",
+    "repo": "sovereign-codex/AVOT-ARCHIVIST",
+    "workflow": "institutional-event-circulation",
+    "status": "experimental"
+  },
+
+  "semantic": {
+    "institutional_state": "close_or_observe",
+    "execution_state": "merged_verified",
+    "flow_state": "terminal_transition_consumed",
+    "authority_state": "bounded_lifecycle_completed",
+    "next_valid_action": "observe_semantic_circulation",
+    "source_role": "AVOT-Fabricator",
+    "receiving_office": "Bootstrap Coordinator",
+    "review_role": "Promotion Reviewer",
+    "review_requirement": "conditional",
+    "handoff_semantics": {
+      "next_agent_required": false,
+      "rediscovery_required": false,
+      "return_basis": "resulting_state_readiness",
+      "continuity_worthy": true
+    }
+  },
+
+  "evidence": {
+    "source_commission": "FPP-TRACE-INDEX-001",
+    "terminal_result": "merged_verified",
+    "observations": [
+      "execution_returns_to_readiness",
+      "promotion_review_is_conditional",
+      "completed_transitions_should_not_require_scheduled_rediscovery",
+      "transport_state_and_semantic_state_are_distinct",
+      "institutional_events_should_not_be_assumed_to_be_execution_signals"
+    ],
+    "test_questions": [
+      "does_archivist_preserve_semantic_envelope",
+      "does_control_center_distinguish_institutional_event",
+      "does_engine_correctly_ignore_or_consume_this_event",
+      "does_trace_preserve_semantic_meaning",
+      "does_codex_graph_make_any_new_semantics_addressable",
+      "does_terminal_close_or_observe_avoid_unnecessary_office_work"
+    ]
+  }
+}
