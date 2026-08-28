@@ -1,0 +1,425 @@
+{
+  "fixture_id": "MHS-EDGE-OBSERVE-001",
+  "contract_version": "0.1",
+  "source_path": "fixtures/capability/mhs-edge-observe-001.source.json",
+  "expected_normalized_path": "fixtures/capability/mhs-edge-observe-001.expected-normalized.json",
+  "normalization_basis": "AVOT-ARCHIVIST/.github/workflows/ingest.yml at reviewed main 1a75592602fbba4da139d59bb7d54a61a5b05acb",
+  "policy": {
+    "all_source_leaf_paths_must_be_preserved_or_classified": true,
+    "critical_identity_and_authority_losses_are_known_gaps": true,
+    "index_or_projection_is_not_authority": true,
+    "physical_actuation_is_prohibited": true
+  },
+  "critical_known_gap_paths": [
+    "authority.allowed_actions",
+    "authority.basis_ref",
+    "authority.ceiling",
+    "authority.gate_ref",
+    "authority.posture",
+    "authority.prohibited_actions",
+    "capability.actuation_available",
+    "capability.declared_actions",
+    "capability.device_class",
+    "capability.unavailable_actions",
+    "constraints.hard_interlocks",
+    "constraints.prohibited_conditions",
+    "constraints.safe_state",
+    "evidence.artifact_refs",
+    "evidence.contradictions",
+    "evidence.telemetry_refs",
+    "identity.actor_id",
+    "identity.adapter_id",
+    "identity.capability_id",
+    "identity.device_id"
+  ],
+  "fields": [
+    {
+      "source_path": "authority.allowed_actions",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "authority.basis_ref",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "authority.ceiling",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "authority.gate_ref",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "authority.posture",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "authority.prohibited_actions",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "capability.actuation_available",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "capability.declared_actions",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "capability.device_class",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "capability.unavailable_actions",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "constraints.hard_interlocks",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "constraints.prohibited_conditions",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "constraints.safe_state",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "event_class",
+      "disposition": "preserved",
+      "destination_path": "event_class",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "evidence.artifact_refs",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "evidence.contradictions",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "evidence.observations",
+      "disposition": "preserved",
+      "destination_path": "evidence.observations",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "evidence.source_commission",
+      "disposition": "preserved",
+      "destination_path": "evidence.source_commission",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "evidence.telemetry_refs",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "evidence.terminal_result",
+      "disposition": "preserved",
+      "destination_path": "evidence.terminal_result",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "evidence.test_questions",
+      "disposition": "preserved",
+      "destination_path": "evidence.test_questions",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "external_standard.implementation_ref",
+      "disposition": "owned_elsewhere",
+      "destination_path": null,
+      "severity": "informational",
+      "owner": "external_adapter_profile"
+    },
+    {
+      "source_path": "external_standard.name",
+      "disposition": "owned_elsewhere",
+      "destination_path": null,
+      "severity": "informational",
+      "owner": "external_adapter_profile"
+    },
+    {
+      "source_path": "external_standard.posture",
+      "disposition": "owned_elsewhere",
+      "destination_path": null,
+      "severity": "informational",
+      "owner": "external_adapter_profile"
+    },
+    {
+      "source_path": "fixture_id",
+      "disposition": "fixture_metadata",
+      "destination_path": null,
+      "severity": "informational",
+      "owner": "offline_fixture"
+    },
+    {
+      "source_path": "fixture_posture",
+      "disposition": "fixture_metadata",
+      "destination_path": null,
+      "severity": "informational",
+      "owner": "offline_fixture"
+    },
+    {
+      "source_path": "identity.actor_id",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "identity.adapter_id",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "identity.capability_id",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "identity.device_id",
+      "disposition": "known_gap",
+      "destination_path": null,
+      "severity": "high",
+      "owner": "archivist_normalization_candidate"
+    },
+    {
+      "source_path": "payload.content_ref",
+      "disposition": "intentional_projection",
+      "destination_path": null,
+      "severity": "medium",
+      "owner": "referenced_artifact_or_telemetry_store"
+    },
+    {
+      "source_path": "payload.reading.relative_humidity_pct",
+      "disposition": "intentional_projection",
+      "destination_path": null,
+      "severity": "medium",
+      "owner": "referenced_artifact_or_telemetry_store"
+    },
+    {
+      "source_path": "payload.reading.temperature_c",
+      "disposition": "intentional_projection",
+      "destination_path": null,
+      "severity": "medium",
+      "owner": "referenced_artifact_or_telemetry_store"
+    },
+    {
+      "source_path": "payload.synthetic",
+      "disposition": "intentional_projection",
+      "destination_path": null,
+      "severity": "medium",
+      "owner": "referenced_artifact_or_telemetry_store"
+    },
+    {
+      "source_path": "protocol_version",
+      "disposition": "preserved",
+      "destination_path": "protocol_version",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "repo",
+      "disposition": "preserved",
+      "destination_path": "repo",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.authority_state",
+      "disposition": "preserved",
+      "destination_path": "semantic.authority_state",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.execution_state",
+      "disposition": "preserved",
+      "destination_path": "semantic.execution_state",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.flow_state",
+      "disposition": "preserved",
+      "destination_path": "semantic.flow_state",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.handoff_semantics.continuity_worthy",
+      "disposition": "preserved",
+      "destination_path": "semantic.handoff_semantics.continuity_worthy",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.handoff_semantics.next_agent_required",
+      "disposition": "preserved",
+      "destination_path": "semantic.handoff_semantics.next_agent_required",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.handoff_semantics.rediscovery_required",
+      "disposition": "preserved",
+      "destination_path": "semantic.handoff_semantics.rediscovery_required",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.handoff_semantics.return_basis",
+      "disposition": "preserved",
+      "destination_path": "semantic.handof_semantics.return_basis",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.institutional_state",
+      "disposition": "preserved",
+      "destination_path": "semantic.institutional_state",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.next_valid_action",
+      "disposition": "preserved",
+      "destination_path": "semantic.next_valid_action",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.receiving_office",
+      "disposition": "preserved",
+      "destination_path": "semantic.receiving_office",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.review_requirement",
+      "disposition": "preserved",
+      "destination_path": "semantic.review_requirement",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.review_role",
+      "disposition": "preserved",
+      "destination_path": "semantic.review_role",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "semantic.source_role",
+      "disposition": "preserved",
+      "destination_path": "semantic.source_role",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "status",
+      "disposition": "preserved",
+      "destination_path": "status",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "timestamp",
+      "disposition": "preserved",
+      "destination_path": "timestamp",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "trace_id",
+      "disposition": "preserved",
+      "destination_path": "trace_id",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    },
+    {
+      "source_path": "workflow",
+      "disposition": "preserved",
+      "destination_path": "workflow",
+      "severity": "none",
+      "owner": "archivist_normalization"
+    }
+  ],
+  "derived_fields": [
+    {
+      "expected_path": "normalization.membrane_version",
+      "value": "archivist.semantic.v0.1-experimental",
+      "basis": "current Archivist semantic membrane"
+    },
+    {
+      "expected_path": "normalization.admission_posture",
+      "value": "allowlisted",
+      "basis": "current Archivist semantic membrane"
+    },
+    {
+      "expected_path": "normalization.source_file",
+      "value": "fixtures/capability/mhs-edge-observe-001.source.json",
+      "basis": "fixture source coordinate"
+    }
+  ]
+}
