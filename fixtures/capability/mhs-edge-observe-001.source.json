@@ -1,0 +1,118 @@
+{
+  "fixture_id": "MHS-EDGE-OBSERVE-001",
+  "fixture_posture": "synthetic_read_only",
+  "trace_id": "capability-mhs-edge-observe-001",
+  "workflow": "offline-capability-fixture",
+  "repo": "sovereign-codex/AVOT-ARCHIVIST",
+  "status": "capability_observed",
+  "timestamp": "2026-08-28T10:50:00Z",
+  "event_class": "institutional_event",
+  "protocol_version": "sovereign-capability/0.1",
+  "identity": {
+    "capability_id": "capability:environment.read",
+    "adapter_id": "adapter:simulated-mhs-edge-001",
+    "device_id": "device:simulated-environmental-sensor-001",
+    "actor_id": "avot:water-observer"
+  },
+  "external_standard": {
+    "name": "Model Hardware Standard",
+    "posture": "research_preview",
+    "implementation_ref": null
+  },
+  "capability": {
+    "device_class": "simulated_environmental_sensor",
+    "actuation_available": false,
+    "declared_actions": [
+      "discover_declared_capability",
+      "read_simulated_environmental_state",
+      "return_static_evidence"
+    ],
+    "unavailable_actions": [
+      "write_device_state",
+      "energize_output",
+      "move_hardware",
+      "change_interlock",
+      "dispatch_repository_event",
+      "promote_procedure"
+    ]
+  },
+  "constraints": {
+    "safe_state": "read_only",
+    "hard_interlocks": [
+      "no_network",
+      "no_actuation",
+      "no_repository_dispatch"
+    ],
+    "prohibited_conditions": [
+      "live_hardware_input",
+      "physical_output",
+      "workflow_invocation",
+      "implicit_authority_upgrade"
+    ]
+  },
+  "authority": {
+    "posture": "observe",
+    "ceiling": "observe",
+    "basis_ref": "notion:FPP-SCC-ARCHIVIST-FIXTURE-001",
+    "gate_ref": "human:continue:2026-08-28",
+    "allowed_actions": [
+      "discover_declared_capability",
+      "read_simulated_environmental_state",
+      "return_static_evidence"
+    ],
+    "prohibited_actions": [
+      "write_device_state",
+      "energize_output",
+      "move_hardware",
+      "change_interlock",
+      "dispatch_repository_event",
+      "promote_procedure"
+    ]
+  },
+  "semantic": {
+    "institutional_state": "capability_fixture_under_test",
+    "execution_state": "offline_static_validation",
+    "flow_state": "source_to_expected_normalization",
+    "authority_state": "observe_only_human_authorized",
+    "next_valid_action": "review_fixture_preservation_return",
+    "source_role": "Fabricator",
+    "receiving_office": "TYME Hall capability reconciliation",
+    "review_role": "Promotion Reviewer",
+    "review_requirement": "human_review_required",
+    "handoff_semantics": {
+      "next_agent_required": false,
+      "rediscovery_required": false,
+      "return_basis": "offline_capability_preservation_fixture",
+      "continuity_worthy": true
+    }
+  },
+  "evidence": {
+    "source_commission": "FPP-SCC-ARCHIVIST-FIXTURE-001",
+    "terminal_result": "synthetic_observation_fixture",
+    "observations": [
+      "The reading is synthetic and does not originate from hardware.",
+      "The authority ceiling is observe-only.",
+      "Current Archivist normalization preserves only an allowlisted semantic subset."
+    ],
+    "test_questions": [
+      "Do capability, adapter, and device identities survive normalization?",
+      "Does the authority basis survive with its allow-list and prohibitions?",
+      "Are all lost fields explicitly classified?"
+    ],
+    "telemetry_refs": [
+      "fixture:synthetic-reading-001"
+    ],
+    "artifact_refs": [
+      "fixture:mhs-edge-observe-001.source"
+    ],
+    "contradictions": []
+  },
+  "payload": {
+    "synthetic": true,
+    "reading": {
+      "temperature_c": 23.4,
+      "relative_humidity_pct": 41.2
+    },
+    "content_ref": "fixture:synthetic-reading-001"
+  }
+}
