@@ -1,0 +1,87 @@
+name: SCC Live Observe Test Ingress
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-observe:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout experiment branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate synthetic capability fixture
+        run: python3 scripts/validate_capability_live_fixture.py
+
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CODEX_APP_ID }}
+          private-key: ${{ secrets.CODEX_APP_PRIVATE_KEY }}
+          owner: sovereign-codex
+
+      - name: Normalize fixture in temporary storage
+        run: |
+          mkdir -p /tmp/scc-live-observe
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          source_path = Path('capability-test/incoming/scc-live-observe-001.json')
+          source = json.loads(source_path.read_text())
+          out = {
+              'trace_id': source['trace_id'],
+              'workflow': source['workflow'],
+              'repo': source['repo'],
+              'status': source.get('status', 'unknown'),
+              'timestamp': source['timestamp'],
+          }
+          for key in ('event_class', 'protocol_version', 'synthetic_test', 'test_posture'):
+              if key in source:
+                  out[key] = source[key]
+          if isinstance(source.get('semantic'), dict):
+              out['semantic'] = source['semantic']
+          if isinstance(source.get('evidence'), dict):
+              out['evidence'] = source['evidence']
+          out['normalization'] = {
+              'membrane_version': 'archivist.capability-test.v0.1',
+              'admission_posture': 'synthetic_test_only',
+              'source_file': 'capability-test/incoming/scc-live-observe-001.json',
+          }
+          if isinstance(source.get('capability_context'), dict):
+              out['capability_context'] = source['capability_context']
+          expected = json.loads(Path('capability-test/expected/scc-live-observe-001.normalized.json').read_text())
+          if out != expected:
+              raise SystemExit('normalized output does not match expected fixture')
+          Path('/tmp/scc-live-observe/event.json').write_text(json.dumps(out, separators=(',', ':'), sort_keys=True))
+          PY
+
+      - name: Dispatch synthetic event to TRACE only
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PAYLOAD=$(cat /tmp/scc-live-observe/event.json)
+          TRACE_BODY=$(jq -n --argjson event "$PAYLOAD" '{event_type:"institutional_event",client_payload:{source:"archivist-capability-test",event:$event}}')
+          TRACE_STATUS=$(curl -s -o /tmp/scc-live-observe/trace-response.txt -w "%{http_code}" -X POST \
+            https://api.github.com/repos/sovereign-codex/AVOT-TRACE/dispatches \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d "$TRACE_BODY")
+          echo "AVOT-TRACE HTTP: $TRACE_STATUS"
+          if [ "$TRACE_STATUS" != "204" ]; then
+            echo "TRACE-only synthetic dispatch failed"
+            exit 1
+          fi
+
+      - name: Stop at witness boundary
+        run: |
+          echo "SCC-LIVE-OBSERVE-001 dispatch boundary complete."
+          echo "No Archivist repository state was written by this workflow."
+          echo "No Control Center dispatch is defined in this workflow."
