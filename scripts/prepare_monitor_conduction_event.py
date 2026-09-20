@@ -81,6 +81,8 @@ def prepare(raw, engine_sha):
     require_string_list(source_refs, "Malformed signal source refs")
     require_string_list(context_refs, "Malformed inference context refs")
     require(signal_id in context_refs, "Inference context lost signal identity")
+    for ref in source_refs:
+        require(ref in context_refs, "Inference context lost raw source provenance")
     for ref in signal_refs:
         require(ref in context_refs, "Inference context lost signal evidence")
 
@@ -129,8 +131,8 @@ def prepare(raw, engine_sha):
 
     handoff_refs = handoff.get("evidence_refs")
     require_string_list(handoff_refs, "Malformed handoff evidence refs")
-    for ref in signal_refs + inference_refs:
-        require(ref in handoff_refs, "Handoff lost required evidence reference")
+    for ref in source_refs + signal_refs + inference_refs:
+        require(ref in handoff_refs, "Handoff lost required provenance/evidence reference")
 
     digest = hashlib.sha256(raw).hexdigest()
     artifact = "evidence/inference/" + digest + ".json"
@@ -169,7 +171,8 @@ def prepare(raw, engine_sha):
                 "signal_id": signal_id,
                 "request_id": request_id,
                 "evidence_id": evidence_id,
-                "source_evidence_refs": signal_refs,
+                "source_refs": source_refs,
+                "signal_evidence_refs": signal_refs,
                 "inference_evidence_refs": inference_refs,
                 "inference_status": status,
                 "handoff_disposition": expected_disposition,

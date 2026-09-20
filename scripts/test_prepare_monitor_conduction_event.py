@@ -12,8 +12,8 @@ from prepare_monitor_conduction_event import prepare
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "fixtures" / "inference" / "era-avot-circulation-001.completed.json"
-ENGINE_SHA = "630b629ca6e1710c7adbf9f042c9288b42d7b0e2"
-EXPECTED_DIGEST = "c4cbf55ea6035f3e8457064093f1c293543b08d9a0a0c0068973ef4aece550a8"
+ENGINE_SHA = "19ff2ceda7c4de75abd3946dcc712f7a38987c1c"
+EXPECTED_DIGEST = "d1b20d1bd5571ff64902ff05dd163dd5648644497b401ce9e7028c42288b4c7e"
 
 
 def fixture_data():
@@ -58,6 +58,14 @@ class MonitorConductionEventTests(unittest.TestCase):
         self.assertEqual(
             terminal["evidence_id"],
             "inference:monitor-conduction:era-avot-circulation-001",
+        )
+        self.assertEqual(
+            terminal["source_refs"],
+            ["source:era-avot-circulation-raw-001"],
+        )
+        self.assertEqual(
+            terminal["signal_evidence_refs"],
+            ["evidence:era-avot-circulation-derived-001"],
         )
 
     def test_actual_ingest_projection_retains_index_without_allowlist_expansion(self):
@@ -110,7 +118,17 @@ class MonitorConductionEventTests(unittest.TestCase):
             ("result.inference.request.authority_posture", "bounded_execute"),
             (
                 "result.inference.request.context_refs",
-                ["evidence:era-avot-circulation-source-001"],
+                [
+                    "signal:era-avot-circulation-001",
+                    "evidence:era-avot-circulation-derived-001",
+                ],
+            ),
+            (
+                "result.handoff.evidence_refs",
+                [
+                    "evidence:era-avot-circulation-derived-001",
+                    "evidence:era-completed-001",
+                ],
             ),
             (
                 "result.inference.return_path.archivist.evidence_id",

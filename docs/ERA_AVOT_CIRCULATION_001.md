@@ -24,7 +24,7 @@ The fixture exists to prove reconstructability, not to activate a live monitor, 
 
 Expected SHA-256 for the exact shared fixture bytes:
 
-`c4cbf55ea6035f3e8457064093f1c293543b08d9a0a0c0068973ef4aece550a8`
+`d1b20d1bd5571ff64902ff05dd163dd5648644497b401ce9e7028c42288b4c7e`
 
 Identity chain:
 
@@ -35,14 +35,14 @@ signal:era-avot-circulation-001
 -> evidence/inference/<sha256>.json
 ```
 
-Engine and Archivist must derive the same evidence identity. The Archivist mapper additionally proves the exact artifact digest and records the exact Engine commit used for review.
+Engine derives the committed fixture from the current conduction implementation under deterministic capture time. Archivist receives the byte-identical fixture, independently derives the same digest, validates lineage, and records exact Engine commit `19ff2ceda7c4de75abd3946dcc712f7a38987c1c` for review.
 
 ## Boundary
 
 The mapper:
 
 - reads one already-reviewed synthetic Engine circulation return;
-- validates signal → request → evidence / TRACE lineage;
+- validates signal → raw source provenance → derived signal evidence → request → inference evidence / TRACE lineage;
 - requires `local_only` and `analysis_only`;
 - requires `work_ref = null`;
 - preserves completed / refused / degraded / failed status without upgrading it;
@@ -63,6 +63,10 @@ The mapper does **not**:
 ## Exact artifact vs index
 
 The exact JSON artifact is the reconstructable evidence carrier.
+
+The fixture deliberately distinguishes raw source provenance (`source:era-avot-circulation-raw-001`) from derived signal evidence (`evidence:era-avot-circulation-derived-001`). Both must survive inference context and the final conduction handoff.
+
+The preserved monitor-stage `handoff_target` is pre-conduction provenance; the top-level conduction `handoff.target` is the post-inference recommendation. A refused, degraded, or failed inference therefore has no final council target even though the earlier monitor recommendation remains reconstructable.
 
 The normalized event is an index containing:
 
@@ -85,7 +89,7 @@ python3 -m unittest scripts/test_prepare_monitor_conduction_event.py -v
 
 The test suite proves:
 
-1. the shared fixture has the same expected SHA-256 as the Engine-side fixture;
+1. the shared fixture has the same expected SHA-256 as the Engine-derived fixture;
 2. signal, request, evidence, and TRACE identities remain aligned;
 3. the current `ingest.yml` projection retains the complete small index without allowlist expansion;
 4. widened authority, lost evidence, dropped context, fallback, and identity mismatch fail closed;
