@@ -103,6 +103,7 @@ def prepare(raw, engine_sha):
 
     inference_refs = result.get("evidence_refs")
     require_string_list(inference_refs, "Malformed or missing inference evidence refs")
+    require(len(inference_refs) > 0, "Missing inference evidence refs")
 
     expected_disposition = {
         "completed": "ready_for_review",
